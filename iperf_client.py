@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 import glob
 import os
 from datetime import datetime
+import re
+from argparse import ArgumentParser
+from argparse import ArgumentDefaultsHelpFormatter
 
 #
 # measurement
@@ -61,10 +64,11 @@ def measure_bw(opt):
             "name": opt.server_name,
             "nb_parallel": opt.nb_parallel,
             "size": opt.psize})
-    ofile_fmt = "{path}iperf-{name}-{dir}-bw-{{bw}}-{{id}}.txt".format(**{
+    ofile_fmt = "{path}iperf-{name}-{dir}-bw-{{bw}}-ps-{psize}-{{id}}.txt".format(**{
             "path": f"{opt.result_dir}/" if opt.result_dir else "",
             "name": opt.server_name,
-            "dir": "rs" if opt.reverse else "sr"})
+            "dir": "rs" if opt.reverse else "sr",
+            "psize": opt.psize})
     if opt.reverse:
         cmd_fmt += " -R"
     for bw in opt.bw_list:
@@ -81,10 +85,11 @@ def measure_pps(opt):
             "name": opt.server_name,
             "nb_parallel": opt.nb_parallel,
             "bw": opt.target_bw})
-    ofile_fmt = "{path}iperf-{name}-{dir}-psize-{{size}}-{{id}}.txt".format(**{
+    ofile_fmt = "{path}iperf-{name}-{dir}-bw-{bw}-ps-{{size}}-{{id}}.txt".format(**{
             "path": f"{opt.result_dir}/" if opt.result_dir else "",
             "name": opt.server_name,
-            "dir": "rs" if opt.reverse else "sr"})
+            "dir": "rs" if opt.reverse else "sr",
+            "bw": opt.target_bw})
     if opt.reverse:
         cmd_fmt += " -R"
     for size in opt.psize_list:
@@ -99,7 +104,6 @@ def measure_pps(opt):
 #
 # graph
 #
-import re
 re_cmdline = re.compile(
         "% iperf3 -u "
         "-c (?P<host>[^\s]+) "
@@ -107,10 +111,6 @@ re_cmdline = re.compile(
         "-b (?P<bw>\d+)(?P<bw_unit>(|[MKGmkg])) "
         "-l (?P<psize>\d+)"
         ".*")
-#text ="% iperf3 -u -c mama -P 1 -b 100m -l 1448"
-#if (r := re_cmdline.match(text)) is not None:
-#    print(r.group("host"))
-#exit(0)
 re_begin = re.compile("^\[\s*ID]\s*Interval\s+.*Lost/Total Datagrams")
 re_result = re.compile(
         "^\[\s*\d+\]\s*"
@@ -122,13 +122,7 @@ re_result = re.compile(
         "\((?P<loss_rate>[\d\.]+)%\)\s+"
         "(?P<role>sender|receiver)"
         ".*")
-#text = "[  8]   0.00-10.00  sec   117 MBytes  98.0 Mbits/sec  0.000 ms  0/95755 (0%) sender"
-#text = "[  8]   0.00-10.00  sec   117 Bytes  98.0 bits/sec  0.000 ms  0/95755 (0%) receiver"
-#text = "[  7]   0.00-10.07  sec  47.6 MBytes  39.7 Mbits/sec  0.405 ms 12/34517 (0.035%)  receiver"
 
-#if (r := re_result.match(text)) is not None:
-#    print(r.group("bitrate_unit"))
-#exit(0)
 def read_file(file_name):
     lines = open(file_name).read().splitlines()
     line_no = 0
@@ -141,7 +135,7 @@ def read_file(file_name):
     #
     result = {"sender":None, "receiver":None}
     if (r := re_cmdline.match(lines[0])) is not None:
-        payload_size = int(r.group("psize"))
+        psize = int(r.group("psize"))
         target_bw = convert_xnum(f'{r.group("bw")}{r.group("bw_unit")}')
     else:
         raise ValueError(f"invalid cmdline, {file_name}")
@@ -159,7 +153,7 @@ def read_file(file_name):
                 "lost": int(r.group("lost")),
                 "packets_sent": int(r.group("total")),
                 "lost_percent": float(r.group("loss_rate")),
-                "payload_size": payload_size,
+                "payload_size": psize,
                 "target_bw": target_bw,
                 }
     else:
@@ -184,10 +178,13 @@ def read_file(file_name):
     return result
 
 def print_result(result):
-    print("{:9} {:8} {:8} {:6} {:6} {:6}".format("target_bw", "bw", "psize", "Mbps", "lost%", "jitter"))
-    print("{:9} {:8} {:8} {:6} {:6} {:6}".format("---------", "--------", "--------", "------", "------", "------"))
+    column_size = [8,8,8,6,6,6]
+    fmt = " ".join([f"{{:{n}}}" for n in column_size])
+    print(fmt.format(
+            "Tgt BW", "Snd BW", "PL Size", "Rcv BW", "lost%", "jitter"))
+    print(" ".join(["-"*n for n in column_size]))
     for i in range(len(result["base_psize"])):
-        print("{:9} {:8} {:8} {:6} {:6} {:6}".format(
+        print(fmt.format(
                 round(result["target_bw"][i]/1e6,2),
                 round(result["sender_bps"][i]/1e6,2),
                 result["base_psize"][i],
@@ -221,6 +218,8 @@ def read_result(file_list):
             "lost_percent": [],
             "jitter_ms": []
             }
+    if len(file_list) == 0:
+        raise ValueError("ERROR: the target file list is empty.")
     # init
     prev_key = None
     target_bw = None
@@ -275,10 +274,11 @@ def read_result(file_list):
     return result
 
 def read_bw_result(opt):
-    fmt = "{path}iperf-{name}-{dir}-bw-{{bw}}-*.txt".format(**{
+    fmt = "{path}iperf-{name}-{dir}-bw-{{bw}}-ps-{psize}-*.txt".format(**{
             "path": f"{opt.result_dir}/" if opt.result_dir else "",
             "name": opt.server_name,
-            "dir": "rs" if opt.reverse else "sr"})
+            "dir": "rs" if opt.reverse else "sr",
+            "psize": opt.psize})
     if opt.bw_list is not None:
         file_list = []
         for bw in opt.bw_list:
@@ -288,10 +288,11 @@ def read_bw_result(opt):
     return read_result(file_list)
 
 def read_pps_result(opt):
-    fmt = "{path}iperf-{name}-{dir}-psize-{{psize}}-*.txt".format(**{
+    fmt = "{path}iperf-{name}-{dir}-bw-{bw}-ps-{{psize}}-*.txt".format(**{
             "path": f"{opt.result_dir}/" if opt.result_dir else "",
             "name": opt.server_name,
-            "dir": "rs" if opt.reverse else "sr"})
+            "dir": "rs" if opt.reverse else "sr",
+            "bw": opt.target_bw})
     if opt.psize_list:
         file_list = []
         for psize in opt.psize_list:
@@ -302,16 +303,18 @@ def read_pps_result(opt):
 
 def save_graph(opt):
     if opt.make_bw_graph:
-        ofile = "{path}iperf-{name}-{dir}-bw.png".format(**{
+        ofile = "{path}iperf-{name}-{dir}-bw-ps-{psize}.png".format(**{
                 "path": f"{opt.result_dir}/" if opt.result_dir else "",
                 "name": opt.server_name,
-                "dir": "rs" if opt.reverse else "sr"})
+                "dir": "rs" if opt.reverse else "sr",
+                "psize": opt.psize})
         plt.savefig(ofile)
     if opt.make_pps_graph:
-        ofile = "{path}iperf-{name}-{dir}-size.png".format(**{
+        ofile = "{path}iperf-{name}-{dir}-bw-{bw}-ps.png".format(**{
                 "path": f"{opt.result_dir}/" if opt.result_dir else "",
                 "name": opt.server_name,
-                "dir": "rs" if opt.reverse else "sr"})
+                "dir": "rs" if opt.reverse else "sr",
+                "bw": opt.target_bw})
         plt.savefig(ofile)
 
 def make_bw_graph(opt):
@@ -394,8 +397,6 @@ def get_test_list(measure, opt_str, default):
         return [convert_xnum(n) for n in opt_str.split(",")]
 
 def main():
-    from argparse import ArgumentParser
-    from argparse import ArgumentDefaultsHelpFormatter
     ap = ArgumentParser(
             description="a utility for iperf3",
             formatter_class=ArgumentDefaultsHelpFormatter)
@@ -473,4 +474,7 @@ def main():
         make_pps_graph(opt)
 
 if __name__ == "__main__" :
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(e)
