@@ -1,26 +1,26 @@
-iperf_client
-============
+iperf_util
+==========
 
 utility to check the network performance.
 
 ## How to use
 
 ```
-% iperf_client.py mama --save-dir sample --measure-bw
+% iperf_util.py server --save-dir sample --measure-bw
 bandwidth test list: 1000000,10000000,20000000,40000000,60000000,80000000,100000000
-iperf3 -u -c mama -P 1 -b 1000000 -l 1448
-iperf3 -u -c mama -P 1 -b 10000000 -l 1448
-iperf3 -u -c mama -P 1 -b 20000000 -l 1448
-iperf3 -u -c mama -P 1 -b 40000000 -l 1448
-iperf3 -u -c mama -P 1 -b 60000000 -l 1448
-iperf3 -u -c mama -P 1 -b 80000000 -l 1448
-iperf3 -u -c mama -P 1 -b 100000000 -l 1448
+iperf3 -u -c server -P 1 -b 1000000 -l 1448
+iperf3 -u -c server -P 1 -b 10000000 -l 1448
+iperf3 -u -c server -P 1 -b 20000000 -l 1448
+iperf3 -u -c server -P 1 -b 40000000 -l 1448
+iperf3 -u -c server -P 1 -b 60000000 -l 1448
+iperf3 -u -c server -P 1 -b 80000000 -l 1448
+iperf3 -u -c server -P 1 -b 100000000 -l 1448
 ```
 
 Then, you can see the result.
 
 ```
-% iperf_client.py mama --save-dir sample --graph-bw
+% iperf_util.py server --save-dir sample --graph-bw
 bandwidth test list: all
 Tgt BW    Snd BW   PL Size  Rcv BW lost%  jitter
 --------- -------- -------- ------ ------ ------
@@ -44,25 +44,25 @@ In this example, you can estimate that the throughput is placed between 40Mbps a
 You can check more precisely with the `--bw-list` option like below.
 
 ```
-% iperf_client.py mama --save-dir sample --measure-bw --bw-list range:40m,60m,2m
+% iperf_util.py server --save-dir sample --measure-bw --bw-list range:40m,60m,2m
 bandwidth test list: 40000000,42000000,44000000,46000000,48000000,50000000,52000000,54000000,56000000,58000000,60000000
-iperf3 -u -c mama -P 1 -b 40000000 -l 1448
-iperf3 -u -c mama -P 1 -b 42000000 -l 1448
-iperf3 -u -c mama -P 1 -b 44000000 -l 1448
-iperf3 -u -c mama -P 1 -b 46000000 -l 1448
-iperf3 -u -c mama -P 1 -b 48000000 -l 1448
-iperf3 -u -c mama -P 1 -b 50000000 -l 1448
-iperf3 -u -c mama -P 1 -b 52000000 -l 1448
-iperf3 -u -c mama -P 1 -b 54000000 -l 1448
-iperf3 -u -c mama -P 1 -b 56000000 -l 1448
-iperf3 -u -c mama -P 1 -b 58000000 -l 1448
-iperf3 -u -c mama -P 1 -b 60000000 -l 1448
+iperf3 -u -c server -P 1 -b 40000000 -l 1448
+iperf3 -u -c server -P 1 -b 42000000 -l 1448
+iperf3 -u -c server -P 1 -b 44000000 -l 1448
+iperf3 -u -c server -P 1 -b 46000000 -l 1448
+iperf3 -u -c server -P 1 -b 48000000 -l 1448
+iperf3 -u -c server -P 1 -b 50000000 -l 1448
+iperf3 -u -c server -P 1 -b 52000000 -l 1448
+iperf3 -u -c server -P 1 -b 54000000 -l 1448
+iperf3 -u -c server -P 1 -b 56000000 -l 1448
+iperf3 -u -c server -P 1 -b 58000000 -l 1448
+iperf3 -u -c server -P 1 -b 60000000 -l 1448
 ```
 
 Then, you can check the result again.
 
 ```
-% iperf_client.py mama --save-dir sample --graph-bw
+% iperf_util.py server --save-dir sample --graph-bw
 bandwidth test list: all
 Tgt BW   Snd BW   PL Size  Rcv BW lost%  jitter
 -------- -------- -------- ------ ------ ------
@@ -94,25 +94,25 @@ For this test, please Remember that you have to specify the target throughput.
 Let's use 60m which was measured by the above exercise.
 
 ```
-% iperf_client.py mama --save-dir sample --measure-pps --target-bw 60m
+% iperf_util.py server --save-dir sample --measure-pps --target-bw 60m
 Target BW: 60m
 packet size test list: 16,32,64,128,256,512,768,1024,1280,1448
-iperf3 -u -c mama -P 1 -b 10m -l 16
-iperf3 -u -c mama -P 1 -b 10m -l 32
-iperf3 -u -c mama -P 1 -b 10m -l 64
-iperf3 -u -c mama -P 1 -b 10m -l 128
-iperf3 -u -c mama -P 1 -b 10m -l 256
-iperf3 -u -c mama -P 1 -b 10m -l 512
-iperf3 -u -c mama -P 1 -b 10m -l 768
-iperf3 -u -c mama -P 1 -b 10m -l 1024
-iperf3 -u -c mama -P 1 -b 10m -l 1280
-iperf3 -u -c mama -P 1 -b 10m -l 1448
+iperf3 -u -c server -P 1 -b 10m -l 16
+iperf3 -u -c server -P 1 -b 10m -l 32
+iperf3 -u -c server -P 1 -b 10m -l 64
+iperf3 -u -c server -P 1 -b 10m -l 128
+iperf3 -u -c server -P 1 -b 10m -l 256
+iperf3 -u -c server -P 1 -b 10m -l 512
+iperf3 -u -c server -P 1 -b 10m -l 768
+iperf3 -u -c server -P 1 -b 10m -l 1024
+iperf3 -u -c server -P 1 -b 10m -l 1280
+iperf3 -u -c server -P 1 -b 10m -l 1448
 ```
 
 You can check the graph of the result as well.
 
 ```
-% iperf_client.py mama --save-dir sample --graph-pps
+% iperf_util.py server --save-dir sample --graph-pps
 packet size test list: all
 target_bw bw       psize    Mbps   lost%  jitter
 --------- -------- -------- ------ ------ ------
