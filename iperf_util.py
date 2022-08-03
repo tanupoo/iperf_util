@@ -192,14 +192,7 @@ def print_result(result):
                 round(result["lost_percent"][i],3),
                 round(result["jitter_ms"][i],3)))
 
-def get_file_sort_key(file_name):
-    """
-    assuming that the 4th number is always the sort key.
-    """
-    basename = os.path.basename(file_name)
-    return convert_xnum(basename[:basename.find(".txt")].split("-")[4])
-
-def read_result(file_list):
+def read_result(file_list, key_no):
     """
     files:
         e.g.
@@ -208,6 +201,14 @@ def read_result(file_list):
             "iperf-host-sr-bw-1000000-20210723165001092010.txt",
             "iperf-host-sr-bw-2000000-20210723165021187028.txt", 
             "iperf-host-sr-bw-2000000-20210723165041727012.txt"
+        ]
+        e.g.
+        [
+            "iperf-host-sr-bw-940m-ps-512-20220803082844970472.txt
+            "iperf-host-sr-bw-940m-ps-768-20220803082855012590.txt
+            "iperf-host-sr-bw-940m-ps-256-20220803082834938697.txt
+            "iperf-host-sr-bw-940m-ps-1024-20220803082905049313.txt
+            "iperf-host-sr-bw-940m-ps-32-20220803082804841190.txt
         ]
     """
     result = {
@@ -230,9 +231,12 @@ def read_result(file_list):
     jitter_ms = 0
     n = 0
     # loop
-    for file_name in sorted(file_list, key=lambda v: get_file_sort_key(v)):
+    def __get_key(file_name):
+        basename = os.path.basename(file_name)
+        return convert_xnum(basename[:basename.find(".txt")].split("-")[key_no])
+    for file_name in sorted(file_list, key=lambda v: __get_key(v)):
         x = read_file(file_name)
-        key = get_file_sort_key(file_name)
+        key = __get_key(file_name)
         if prev_key is not None and prev_key != key:
             result["target_bw"].append(target_bw)
             result["base_psize"].append(target_psize)
@@ -248,13 +252,6 @@ def read_result(file_list):
             lost_percent = 0
             jitter_ms = 0
             n = 0
-        # sanity check
-        if target_bw is not None and target_bw != x["sender"]["target_bw"]:
-            raise ValueError("ERROR: target_bw {} != {}".format(
-                    target_bw, x["sender"]["target_bw"]))
-        if target_psize is not None and target_psize != x["sender"]["payload_size"]:
-            raise ValueError("ERROR: target_psize {} != {}".format(
-                target_psize, x["sender"]["payload_size"]))
         #
         prev_key = key
         target_bw = x["sender"]["target_bw"]
@@ -285,7 +282,7 @@ def read_bw_result(opt):
             file_list.extend(glob.glob(fmt.format(**{"bw":bw})))
     else:
         file_list = glob.glob(fmt.format(**{"bw":"*"}))
-    return read_result(file_list)
+    return read_result(file_list, key_no=4 if opt.make_bw_graph else 6)
 
 def read_pps_result(opt):
     fmt = "{path}iperf-{name}-{dir}-bw-{bw}-ps-{{psize}}-*.txt".format(**{
@@ -299,7 +296,7 @@ def read_pps_result(opt):
             file_list.append(fmt.format(**{"psize":psize}))
     else:
         file_list = glob.glob(fmt.format(**{"psize":"*"}))
-    return read_result(file_list)
+    return read_result(file_list, key_no=4 if opt.make_bw_graph else 6)
 
 def save_graph(opt):
     if opt.make_bw_graph:
