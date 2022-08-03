@@ -192,7 +192,13 @@ def print_result(result):
                 round(result["lost_percent"][i],3),
                 round(result["jitter_ms"][i],3)))
 
-def read_result(file_list, key_no):
+def read_result(template, p_list, k_name, key_no):
+    if p_list is not None and len(p_list) > 0:
+        file_list = []
+        for v in p_list:
+            file_list.extend(glob.glob(template.format(**{k_name: v})))
+    else:
+        file_list = glob.glob(template.format(**{k_name: "*"}))
     """
     files:
         e.g.
@@ -270,34 +276,6 @@ def read_result(file_list, key_no):
     result["jitter_ms"].append(jitter_ms/n)
     return result
 
-def read_bw_result(opt):
-    fmt = "{path}iperf-{name}-{dir}-bw-{{bw}}-ps-{psize}-*.txt".format(**{
-            "path": f"{opt.result_dir}/" if opt.result_dir else "",
-            "name": opt.server_name,
-            "dir": "rs" if opt.reverse else "sr",
-            "psize": opt.psize})
-    if opt.bw_list is not None:
-        file_list = []
-        for bw in opt.bw_list:
-            file_list.extend(glob.glob(fmt.format(**{"bw":bw})))
-    else:
-        file_list = glob.glob(fmt.format(**{"bw":"*"}))
-    return read_result(file_list, key_no=4 if opt.make_bw_graph else 6)
-
-def read_pps_result(opt):
-    fmt = "{path}iperf-{name}-{dir}-bw-{bw}-ps-{{psize}}-*.txt".format(**{
-            "path": f"{opt.result_dir}/" if opt.result_dir else "",
-            "name": opt.server_name,
-            "dir": "rs" if opt.reverse else "sr",
-            "bw": opt.target_bw})
-    if opt.psize_list:
-        file_list = []
-        for psize in opt.psize_list:
-            file_list.append(fmt.format(**{"psize":psize}))
-    else:
-        file_list = glob.glob(fmt.format(**{"psize":"*"}))
-    return read_result(file_list, key_no=4 if opt.make_bw_graph else 6)
-
 def save_graph(opt):
     if opt.make_bw_graph:
         ofile = "{path}iperf-{name}-{dir}-bw-ps-{psize}.png".format(**{
@@ -315,7 +293,12 @@ def save_graph(opt):
         plt.savefig(ofile)
 
 def make_bw_graph(opt):
-    result = read_bw_result(opt)
+    template = "{path}iperf-{name}-{dir}-bw-{{bw}}-ps-{psize}-*.txt".format(**{
+                        "path": f"{opt.result_dir}/" if opt.result_dir else "",
+                        "name": opt.server_name,
+                        "dir": "rs" if opt.reverse else "sr",
+                        "psize": opt.psize})
+    result = read_result(template, opt.bw_list, "bw", 4)
     print_result(result)
     fig = plt.figure()
     fig.suptitle("BW: {}".format("server to client" if opt.reverse else "client to server"))
@@ -348,7 +331,12 @@ def make_bw_graph(opt):
         plt.show()
 
 def make_pps_graph(opt):
-    result = read_pps_result(opt)
+    template = "{path}iperf-{name}-{dir}-bw-{bw}-ps-{{psize}}-*.txt".format(**{
+                        "path": f"{opt.result_dir}/" if opt.result_dir else "",
+                        "name": opt.server_name,
+                        "dir": "rs" if opt.reverse else "sr",
+                        "bw": opt.target_bw})
+    result = read_result(template, opt.psize_list, "psize", 6)
     print_result(result)
     fig = plt.figure()
     fig.suptitle("PPS {}Mbps: {}".format(
@@ -471,7 +459,4 @@ def main():
         make_pps_graph(opt)
 
 if __name__ == "__main__" :
-    try:
-        main()
-    except Exception as e:
-        print(e)
+    main()
