@@ -9,35 +9,12 @@ from datetime import datetime
 import re
 from argparse import ArgumentParser
 from argparse import ArgumentDefaultsHelpFormatter
+from utils import convert_xnum
+from read_logfile import read_logfile
 
 #
 # measurement
 #
-
-def convert_xnum(n):
-    if n.find(".") > 0:
-        # float
-        try:
-            return float(n)
-        except ValueError:
-            if n[-1] in ["k", "K"]:
-                return float(n[:-1])*1E3
-            elif n[-1] in ["m", "M"]:
-                return float(n[:-1])*1E6
-            elif n[-1] in ["g", "G"]:
-                return float(n[:-1])*1E9
-    else:
-        # int
-        try:
-            return int(n)
-        except ValueError:
-            if n[-1] in ["k", "K"]:
-                return round(int(n[:-1])*1E3)
-            elif n[-1] in ["m", "M"]:
-                return round(int(n[:-1])*1E6)
-            elif n[-1] in ["g", "G"]:
-                return round(int(n[:-1])*1E9)
-
 def iperf(cmd, output_file):
     """
     the option --logfile doesn't save the command line.
@@ -104,79 +81,6 @@ def measure_pps(opt):
 #
 # graph
 #
-re_cmdline = re.compile(
-        "% iperf3 -u "
-        "-c (?P<host>[^\s]+) "
-        "-P (?P<nb_parallel>\d+) "
-        "-b (?P<bw>\d+)(?P<bw_unit>(|[MKGmkg])) "
-        "-l (?P<psize>\d+)"
-        ".*")
-re_begin = re.compile("^\[\s*ID]\s*Interval\s+.*Lost/Total Datagrams")
-re_result = re.compile(
-        "^\[\s*\d+\]\s*"
-        "(?P<start>[\d\.]+)-(?P<end>[\d\.]+)\s+sec\s+"
-        "(?P<transfer>[\d\.]+)\s+(?P<transfer_unit>(|[MKG]))Bytes\s+"
-        "(?P<bitrate>[\d\.]+)\s+(?P<bitrate_unit>(|[MKG]))bits/sec\s+"
-        "(?P<jitter>[\d\.]+)\s+ms\s+"
-        "(?P<lost>[\d\.]+)/(?P<total>[\d\.]+)\s+"
-        "\((?P<loss_rate>[\d\.]+)%\)\s+"
-        "(?P<role>sender|receiver)"
-        ".*")
-
-def read_file(file_name):
-    lines = open(file_name).read().splitlines()
-    line_no = 0
-    for i,line in enumerate(lines):
-        if (r := re_begin.match(line)) is not None:
-            line_no = i
-            break
-    else:
-        raise ValueError(f"invalid structure, {file_name}")
-    #
-    result = {"sender":None, "receiver":None}
-    if (r := re_cmdline.match(lines[0])) is not None:
-        psize = int(r.group("psize"))
-        target_bw = convert_xnum(f'{r.group("bw")}{r.group("bw_unit")}')
-    else:
-        raise ValueError(f"invalid cmdline, {file_name}")
-    if (r := re_result.match(lines[line_no+1])) is not None:
-        if r.group("role") != "sender":
-            raise ValueError(f'invalid role {r.group("role")}, {file_name}')
-        result["sender"] = {
-                "start": float(r.group("start")),
-                "end": float(r.group("end")),
-                "bytes_sent": convert_xnum(
-                        f'{r.group("transfer")}{r.group("transfer_unit")}'),
-                "bps": convert_xnum(
-                        f'{r.group("bitrate")}{r.group("bitrate_unit")}'),
-                "jitter_ms": float(r.group("jitter")),
-                "lost": int(r.group("lost")),
-                "packets_sent": int(r.group("total")),
-                "lost_percent": float(r.group("loss_rate")),
-                "payload_size": psize,
-                "target_bw": target_bw,
-                }
-    else:
-        raise ValueError(f"invalid structure, {file_name}")
-    if (r := re_result.match(lines[line_no+2])) is not None:
-        if r.group("role") != "receiver":
-            raise ValueError(f'invalid role {r.group("role")}, {file_name}')
-        result["receiver"] = {
-                "start": float(r.group("start")),
-                "end": float(r.group("end")),
-                "bytes_received": convert_xnum(
-                        f'{r.group("transfer")}{r.group("transfer_unit")}'),
-                "bps": convert_xnum(
-                        f'{r.group("bitrate")}{r.group("bitrate_unit")}'),
-                "jitter_ms": float(r.group("jitter")),
-                "lost": int(r.group("lost")),
-                "packets_received": int(r.group("total")),
-                "lost_percent": float(r.group("loss_rate")),
-                }
-    else:
-        raise ValueError(f"invalid structure, {file_name}")
-    return result
-
 def print_result(result):
     column_size = [8,8,8,6,6,6]
     fmt = " ".join([f"{{:{n}}}" for n in column_size])
@@ -241,7 +145,7 @@ def read_result(template, p_list, k_name, key_no):
         basename = os.path.basename(file_name)
         return convert_xnum(basename[:basename.find(".txt")].split("-")[key_no])
     for file_name in sorted(file_list, key=lambda v: __get_key(v)):
-        x = read_file(file_name)
+        x = read_logfile(file_name)
         key = __get_key(file_name)
         if prev_key is not None and prev_key != key:
             result["target_bw"].append(target_bw)
