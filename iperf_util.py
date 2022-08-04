@@ -9,8 +9,10 @@ from datetime import datetime
 import re
 from argparse import ArgumentParser
 from argparse import ArgumentDefaultsHelpFormatter
-from utils import convert_xnum
+from utils import convert_xnum, get_test_list
 from read_logfile import read_logfile
+import json
+from statistics import mean
 
 #
 # measurement
@@ -36,233 +38,166 @@ def iperf(cmd, output_file):
             fd.write(f"% {cmd}\n")
             fd.write(outs.decode())
 
-def measure_bw(opt):
-    cmd_fmt = "iperf3 -u -c {name} -P {nb_parallel} -b {{bw}} -l {size}".format(**{
+def measure(opt):
+    print("bandwidth:",
+            ",".join([str(n) for n in opt.bw_list]))
+    print("payload size:",
+            ",".join([str(n) for n in opt.psize_list]))
+    cmd_fmt = "iperf3 -u -c {name} -P {nb_parallel} -b {{bw}} -l {{psize}}".format(**{
             "name": opt.server_name,
-            "nb_parallel": opt.nb_parallel,
-            "size": opt.psize})
-    ofile_fmt = "{path}iperf-{name}-{dir}-bw-{{bw}}-ps-{psize}-{{id}}.txt".format(**{
+            "nb_parallel": opt.nb_parallel})
+    ofile_fmt = "{path}iperf-{name}-{dir}-bw-{{bw}}-ps-{{psize}}-{{id}}.txt".format(**{
             "path": f"{opt.result_dir}/" if opt.result_dir else "",
             "name": opt.server_name,
-            "dir": "rs" if opt.reverse else "sr",
-            "psize": opt.psize})
+            "dir": "rs" if opt.reverse else "sr"})
     if opt.reverse:
         cmd_fmt += " -R"
     for bw in opt.bw_list:
-        cmd = cmd_fmt.format(**{"bw":bw})
-        print(cmd)
-        output_file = ofile_fmt.format(**{
-                "bw": bw,
-                "id": datetime.now().strftime("%Y%m%d%H%M%S%f")
-                })
-        iperf(cmd, output_file)
-
-def measure_pps(opt):
-    cmd_fmt = "iperf3 -u -c {name} -P {nb_parallel} -b {bw} -l {{size}}".format(**{
-            "name": opt.server_name,
-            "nb_parallel": opt.nb_parallel,
-            "bw": opt.target_bw})
-    ofile_fmt = "{path}iperf-{name}-{dir}-bw-{bw}-ps-{{size}}-{{id}}.txt".format(**{
-            "path": f"{opt.result_dir}/" if opt.result_dir else "",
-            "name": opt.server_name,
-            "dir": "rs" if opt.reverse else "sr",
-            "bw": opt.target_bw})
-    if opt.reverse:
-        cmd_fmt += " -R"
-    for size in opt.psize_list:
-        cmd = cmd_fmt.format(**{"size":size})
-        print(cmd)
-        output_file = ofile_fmt.format(**{
-                "size": size,
-                "id": datetime.now().strftime("%Y%m%d%H%M%S%f")
-                })
-        iperf(cmd, output_file)
+        for psize in opt.psize_list:
+            cmd = cmd_fmt.format(**{"bw":bw, "psize":psize})
+            print(cmd)
+            output_file = ofile_fmt.format(**{
+                    "bw": bw,
+                    "psize": psize,
+                    "id": datetime.now().strftime("%Y%m%d%H%M%S%f")
+                    })
+            iperf(cmd, output_file)
 
 #
 # graph
 #
-def print_result(result):
-    column_size = [8,8,8,6,6,6]
+def print_result(result, x_axis):
+    assert x_axis in ["br", "psize"]
+    column_size = [8,8,8,8,8,8,6,6]
     fmt = " ".join([f"{{:{n}}}" for n in column_size])
+    if x_axis == "br":
+        k1 = ""
     print(fmt.format(
-            "Tgt BW", "Snd BW", "PL Size", "Rcv BW", "lost%", "jitter"))
+            "Tgt Br", "PL Size",
+            "Snd Br", "Rcv Br",
+            "Snd PPS", "Rcv PPS",
+            "lost%", "jitter"))
     print(" ".join(["-"*n for n in column_size]))
-    for i in range(len(result["base_psize"])):
-        print(fmt.format(
-                round(result["target_bw"][i]/1e6,2),
-                round(result["sender_bps"][i]/1e6,2),
-                result["base_psize"][i],
-                round(result["receiver_bps"][i]/1e6,2),
-                round(result["lost_percent"][i],3),
-                round(result["jitter_ms"][i],3)))
+    for k1 in sorted(result.keys()):
+        for k2 in sorted(result[k1].keys()):
+            d = result[k1][k2]
+            if x_axis == "br":
+                bw = k2
+                psize = k1
+            else:
+                bw = k1
+                psize = k2
+            print(fmt.format(
+                round(bw/1e6,2),
+                psize,
+                round(d["send_br"]/1e6,2),
+                round(d["recv_br"]/1e6,2),
+                round(d["send_pps"]/1e6,2),
+                round(d["recv_pps"]/1e6,2),
+                round(d["lost"],3),
+                round(d["jitter"],3)))
 
-def read_result(template, p_list, k_name, key_no):
-    if p_list is not None and len(p_list) > 0:
-        file_list = []
-        for v in p_list:
-            file_list.extend(glob.glob(template.format(**{k_name: v})))
-    else:
-        file_list = glob.glob(template.format(**{k_name: "*"}))
-    """
-    files:
-        e.g.
-        [
-            "iperf-host-sr-bw-1000000-20210723164951001895.txt", 
-            "iperf-host-sr-bw-1000000-20210723165001092010.txt",
-            "iperf-host-sr-bw-2000000-20210723165021187028.txt", 
-            "iperf-host-sr-bw-2000000-20210723165041727012.txt"
-        ]
-        e.g.
-        [
-            "iperf-host-sr-bw-940m-ps-512-20220803082844970472.txt
-            "iperf-host-sr-bw-940m-ps-768-20220803082855012590.txt
-            "iperf-host-sr-bw-940m-ps-256-20220803082834938697.txt
-            "iperf-host-sr-bw-940m-ps-1024-20220803082905049313.txt
-            "iperf-host-sr-bw-940m-ps-32-20220803082804841190.txt
-        ]
-    """
-    result = {
-            "target_bw": [],
-            "base_psize": [],
-            "sender_bps": [],
-            "receiver_bps": [],
-            "lost_percent": [],
-            "jitter_ms": []
-            }
-    if len(file_list) == 0:
+def read_result(opt, x_axis):
+    assert x_axis in ["br", "psize"]
+    template = "{path}iperf-{name}-{dir}-bw-{{bw}}-ps-{{psize}}-*.txt".format(
+            **{
+            "path": f"{opt.result_dir}/" if opt.result_dir else "",
+            "name": opt.server_name,
+            "dir": "rs" if opt.reverse else "sr"
+            })
+    base_list = []
+    for bw in opt.bw_list:
+        for psize in opt.psize_list:
+            glob_name = template.format(**{"bw": bw, "psize": psize})
+            base_list.extend(glob.glob(glob_name))
+    result = {}
+    for fname in base_list:
+        r = re.match(".*iperf-"
+                     "[^-]+-"
+                     "[^-]+-"
+                     "bw-([^-]+)-"
+                     "ps-([^-]+)-"
+                     ".*.txt", fname)
+        if r:
+            if x_axis == "br":
+                k1 = r.group(2) # psize
+                k2 = r.group(1) # bw
+            else:
+                k1 = r.group(1) # bw
+                k2 = r.group(2) # psize
+            x0 = result.setdefault(convert_xnum(k1), {})
+            x1 = x0.setdefault(convert_xnum(k2), {
+                    "dataset": [],
+                    "send_br": 0,
+                    "recv_br": 0,
+                    "send_pps": 0,
+                    "recv_pps": 0,
+                    "lost": 0,
+                    "jitter": 0,
+                    })
+            d = read_logfile(fname)
+            x1["dataset"].append({"name": fname, "data": d})
+            ds = d["sender"]
+            dr = d["receiver"]
+            x1["send_br"] += ds["bps"]
+            x1["recv_br"] += dr["bps"]
+            x1["send_pps"] += (ds["bps"]/8/ds["payload_size"]*1e6)
+            x1["recv_pps"] += (dr["bps"]/8/ds["payload_size"]*1e6)
+            x1["lost"] += dr["lost_percent"]
+            x1["jitter"] += dr["jitter_ms"]
+    for k1 in result.keys():
+        for k2 in result[k1].keys():
+            x1 = result[k1][k2]
+            nb_items = len(x1["dataset"])
+            if nb_items > 1:
+                x1["send_br"] /= nb_items
+                x1["recv_br"] /= nb_items
+                x1["send_pps"] /= nb_items
+                x1["recv_pps"] /= nb_items
+                x1["lost"] /= nb_items
+                x1["jitter"] /= nb_items
+    if len(result) == 0:
         raise ValueError("ERROR: the target file list is empty.")
-    # init
-    prev_key = None
-    target_bw = None
-    target_psize = None
-    sender_bps = 0
-    receiver_bps = 0
-    lost_percent = 0
-    jitter_ms = 0
-    n = 0
-    # loop
-    def __get_key(file_name):
-        basename = os.path.basename(file_name)
-        return convert_xnum(basename[:basename.find(".txt")].split("-")[key_no])
-    for file_name in sorted(file_list, key=lambda v: __get_key(v)):
-        x = read_logfile(file_name)
-        key = __get_key(file_name)
-        if prev_key is not None and prev_key != key:
-            result["target_bw"].append(target_bw)
-            result["base_psize"].append(target_psize)
-            result["sender_bps"].append(sender_bps/n)
-            result["receiver_bps"].append(receiver_bps/n)
-            result["lost_percent"].append(lost_percent/n)
-            result["jitter_ms"].append(jitter_ms/n)
-            # init
-            target_bw = None
-            target_psize = None
-            sender_bps = 0
-            receiver_bps = 0
-            lost_percent = 0
-            jitter_ms = 0
-            n = 0
-        #
-        prev_key = key
-        target_bw = x["sender"]["target_bw"]
-        target_psize = x["sender"]["payload_size"]
-        sender_bps += x["sender"]["bps"]
-        receiver_bps += x["receiver"]["bps"]
-        lost_percent += x["receiver"]["lost_percent"]
-        jitter_ms += x["receiver"]["jitter_ms"]
-        n += 1
-    # final
-    result["target_bw"].append(target_bw)
-    result["base_psize"].append(target_psize)
-    result["sender_bps"].append(sender_bps/n)
-    result["receiver_bps"].append(receiver_bps/n)
-    result["lost_percent"].append(lost_percent/n)
-    result["jitter_ms"].append(jitter_ms/n)
+    if opt.verbose:
+        print(json.dumps(result, indent=4))
+    print_result(result, x_axis)
     return result
 
 def save_graph(opt):
     if opt.make_bw_graph:
-        ofile = "{path}iperf-{name}-{dir}-bw-ps-{psize}.png".format(**{
+        ofile = "{path}iperf-{name}-{dir}-bw.png".format(**{
                 "path": f"{opt.result_dir}/" if opt.result_dir else "",
                 "name": opt.server_name,
-                "dir": "rs" if opt.reverse else "sr",
-                "psize": opt.psize})
+                "dir": "rs" if opt.reverse else "sr"})
         plt.savefig(ofile)
-    if opt.make_pps_graph:
-        ofile = "{path}iperf-{name}-{dir}-bw-{bw}-ps.png".format(**{
+    if opt.make_psize_graph:
+        ofile = "{path}iperf-{name}-{dir}-psize.png".format(**{
                 "path": f"{opt.result_dir}/" if opt.result_dir else "",
                 "name": opt.server_name,
-                "dir": "rs" if opt.reverse else "sr",
-                "bw": opt.target_bw})
+                "dir": "rs" if opt.reverse else "sr"})
         plt.savefig(ofile)
-
-def make_bw_graph(opt):
-    template = "{path}iperf-{name}-{dir}-bw-{{bw}}-ps-{psize}-*.txt".format(**{
-                        "path": f"{opt.result_dir}/" if opt.result_dir else "",
-                        "name": opt.server_name,
-                        "dir": "rs" if opt.reverse else "sr",
-                        "psize": opt.psize})
-    result = read_result(template, opt.bw_list, "bw", 4)
-    print_result(result)
-    fig = plt.figure()
-    fig.suptitle("BW: {}".format("server to client" if opt.reverse else "client to server"))
-    ax = fig.add_subplot(1,1,1)
-    ax.set_xlabel("Sender Bandwidth(Mbps)")
-
-    line0 = ax.plot(result["target_bw"], result["target_bw"],
-                    label="bps", color="k", alpha=0.2)
-
-    line1 = ax.plot(result["sender_bps"], result["receiver_bps"],
-                    label="bps", color="#d55e00")
-    ax.set_ylabel("Receiver (bps)", color=line1[0].get_color())
-
-    ax2 = ax.twinx()
-    line2 = ax2.plot(result["sender_bps"], result["lost_percent"],
-                     label="lost%", color="#f0e442")
-    ax2.set_ylabel("Lost%", color=line2[0].get_color())
-
-    ax3 = ax.twinx()
-    line3 = ax3.plot(result["sender_bps"], result["jitter_ms"],
-                     label="jitter", color="#009e73", alpha=0.5)
-    ax3.set_ylabel("Jitter(ms)", color=line3[0].get_color())
-    ax3.spines["right"].set_position(("outward", 50))
-
-    ax.grid()
-    fig.tight_layout()
-    if opt.save_graph:
-        save_graph(opt)
-    if opt.show_graph:
-        plt.show()
 
 def make_pps_graph(opt):
-    template = "{path}iperf-{name}-{dir}-bw-{bw}-ps-{{psize}}-*.txt".format(**{
-                        "path": f"{opt.result_dir}/" if opt.result_dir else "",
-                        "name": opt.server_name,
-                        "dir": "rs" if opt.reverse else "sr",
-                        "bw": opt.target_bw})
-    result = read_result(template, opt.psize_list, "psize", 6)
-    print_result(result)
+    result = read_result(opt, "br")
+
     fig = plt.figure()
-    fig.suptitle("PPS {}Mbps: {}".format(
-            result["target_bw"][0]/1e6,
-            "server to client" if opt.reverse else "client to server"))
+    fig.suptitle(f"M BW")
     ax = fig.add_subplot(1,1,1)
-    ax.set_xlabel("Packet Size(bytes)")
+    """
+    # reference
+    x0 = sorted([i/1e6 for i in sorted(result[list(result.keys())[0]])])
+    line0 = ax.plot(x0, x0, label="tx_br", color="k", alpha=0.2,
+                    linestyle="dashed")
+    """
 
-    line1 = ax.plot(result["base_psize"], result["receiver_bps"],
-                    label="bps", color="#d55e00")
-    ax.set_ylabel("Receiver (bps)", color=line1[0].get_color())
-
-    ax2 = ax.twinx()
-    line2 = ax2.plot(result["base_psize"], result["lost_percent"],
-                     label="lost%", color="#f0e442")
-    ax2.set_ylabel("Lost%", color=line2[0].get_color())
-
-    ax3 = ax.twinx()
-    line3 = ax3.plot(result["base_psize"], result["jitter_ms"],
-                     label="jitter", color="#009e73", alpha=0.5)
-    ax3.set_ylabel("Jitter(ms)", color=line3[0].get_color())
-    ax3.spines["right"].set_position(("outward", 50))
+    ax.set_xlabel("Tx PPS")
+    ax.set_ylabel("Rx Lost (%)")
+    for psize in sorted(result.keys()):
+        brs = result[psize]
+        line1 = ax.plot([brs[br]["send_pps"]/1e6 for br in sorted(brs)],
+                        [brs[br]["lost"]/1e6 for br in sorted(brs)],
+                        label=f"{psize}")
+    plt.legend()
 
     ax.grid()
     fig.tight_layout()
@@ -271,96 +206,194 @@ def make_pps_graph(opt):
     if opt.show_graph:
         plt.show()
 
-def get_test_list(measure, opt_str, default):
-    if not measure and opt_str is None:
-        return None
-    if measure and opt_str is None:
-        opt_str = default
-    if opt_str.startswith("range:"):
-        start_bw,end_bw,delta_bw = opt_str.removeprefix("range:").split(",")
-        return [n for n in range(
-                convert_xnum(start_bw),
-                convert_xnum(end_bw)+1,
-                convert_xnum(delta_bw))]
+def make_bw_graph(opt):
+    result = read_result(opt, "br")
+
+    if len(result.keys()) == 1:
+        psize = list(result.keys())[0]
+        brs = result[psize]
+        #
+        fig = plt.figure()
+        fig.suptitle(f"{psize} B")
+        ax = fig.add_subplot(1,1,1)
+        # reference
+        x0 = sorted([i/1e6 for i in sorted(brs)])
+        line0 = ax.plot(x0, x0, label="tx_br", color="k", alpha=0.2,
+                        linestyle="dashed")
+        ax.set_xlabel("Tx Rate (Mbps)")
+
+        x = [brs[br]["send_br"]/1e6 for br in sorted(brs)]
+
+        line1 = ax.plot(x,
+                        [brs[br]["recv_br"]/1e6 for br in sorted(brs)],
+                        label="rx_br", color="#d55e00",
+                        marker="o",
+                        linestyle="solid")
+        ax.set_ylabel("Rx Rate (Mbps)", color=line1[0].get_color())
+
+        ax2 = ax.twinx()
+        line2 = ax2.plot(x,
+                        [brs[br]["lost"] for br in sorted(brs)],
+                        label="lost%", color="#f0e442")
+        ax2.set_ylabel("Lost%", color=line2[0].get_color())
+
+        ax3 = ax.twinx()
+        line3 = ax3.plot(x,
+                        [brs[br]["jitter"] for br in sorted(brs)],
+                        label="jitter", color="#009e73", alpha=0.5)
+        ax3.set_ylabel("Jitter(ms)", color=line3[0].get_color())
+        ax3.spines["right"].set_position(("outward", 50))
+
+        ax4 = ax.twinx()
+        line4 = ax4.plot(x,
+                        [brs[br]["recv_pps"] for br in sorted(brs)],
+                        label="pps", color="#d022d5", alpha=0.5)
+        ax4.spines["left"].set_visible(True)
+        ax4.spines["left"].set_position(("outward", 50))
+        ax4.yaxis.set_label_position('left')
+        ax4.yaxis.set_ticks_position('left')
+        ax4.set_ylabel("pps", color=line4[0].get_color())
+
     else:
-        return [convert_xnum(n) for n in opt_str.split(",")]
+        fig = plt.figure()
+        fig.suptitle(f"M BW")
+        ax = fig.add_subplot(1,1,1)
+        # reference
+        x0 = sorted([i/1e6 for i in sorted(result[list(result.keys())[0]])])
+        line0 = ax.plot(x0, x0, label="tx_br", color="k", alpha=0.2,
+                        linestyle="dashed")
+        ax.set_xlabel("Tx Rate (Mbps)")
+
+        for psize in sorted(result.keys()):
+            brs = result[psize]
+            x = [brs[br]["send_br"]/1e6 for br in sorted(brs)]
+            """
+            line0 = ax.plot(x0, x0,
+                            label=f"send_br_{psize}", color="k", alpha=0.2)
+            """
+
+            line1 = ax.plot([brs[br]["send_br"]/1e6 for br in sorted(brs)],
+                            [brs[br]["recv_br"]/1e6 for br in sorted(brs)],
+                            label=f"recv_br_{psize}")
+            ax.set_ylabel("Rx Rate (Mbps)", color=line1[0].get_color())
+        plt.legend()
+
+    ax.grid()
+    fig.tight_layout()
+    if opt.save_graph:
+        save_graph(opt)
+    if opt.show_graph:
+        plt.show()
+
+def make_psize_graph(opt):
+    result = read_result(opt, "psize")
+
+    if len(result.keys()) == 1:
+        bw = list(result.keys())[0]
+        pss = result[bw]
+        #
+        fig = plt.figure()
+        fig.suptitle("PPS {}Mbps: {}".format(
+                result["target_br"][0]/1e6,
+                "server to client" if opt.reverse else "client to server"))
+        ax = fig.add_subplot(1,1,1)
+        ax.set_xlabel("Packet Size(bytes)")
+
+        line1 = ax.plot(result["base_psize"], result["receiver_bps"],
+                        label="bps", color="#d55e00")
+        ax.set_ylabel("Receiver (bps)", color=line1[0].get_color())
+
+        ax2 = ax.twinx()
+        line2 = ax2.plot(result["base_psize"], result["lost_percent"],
+                        label="lost%", color="#f0e442")
+        ax2.set_ylabel("Lost%", color=line2[0].get_color())
+
+        ax3 = ax.twinx()
+        line3 = ax3.plot(result["base_psize"], result["jitter_ms"],
+                        label="jitter", color="#009e73", alpha=0.5)
+        ax3.set_ylabel("Jitter(ms)", color=line3[0].get_color())
+        ax3.spines["right"].set_position(("outward", 50))
+    else:
+        raise NotImplemented("ERROR")
+
+    ax.grid()
+    fig.tight_layout()
+    if opt.save_graph:
+        save_graph(opt)
+    if opt.show_graph:
+        plt.show()
+
+bw_profile = {
+    "1g": "1m,100m,200m,400m,600m,700m,800m,900m,1000m",
+    "100m": "1m,10m,20m,40m,60m,70m,80m,90m,100m",
+    "50m": "1m,10m,20m,30m,35m,40m,45m,50m",
+    "10m": "1m,2m,4m,6m,7m,8m,9m,10m",
+    }
 
 def main():
     ap = ArgumentParser(
             description="a utility for iperf3",
             formatter_class=ArgumentDefaultsHelpFormatter)
     ap.add_argument("server_name", help="server name")
-    ap.add_argument("--measure-bw", action="store_true", dest="measure_bw",
-                    help="specify to measure bandwidth.")
-    ap.add_argument("--psize", action="store", dest="psize",
-                    type=int, default=1448,
-                    help="specify the payload size for the --measure-bw option.")
+    ap.add_argument("--profile", action="store", dest="bw_profile",
+                    choices=["1g","100m","50m","10m"],
+                    default="100m",
+                    help="specify not to test.")
     ap.add_argument("--bw-list", metavar="BW_SPEC", action="store",
                     dest="bw_list_str",
-                    help="specify the list of the bandwidths "
-                        "for the --measure-bw option.")
-    ap.add_argument("--measure-pps", action="store_true", dest="measure_pps",
-                    help="specify to measure pps.")
+                    help="specify the list of the bandwidths.")
     ap.add_argument("--psize-list", metavar="PSIZE_SPEC", action="store",
                     dest="psize_list_str",
-                    help="specify the list of the packet sizes to be sent.")
-    ap.add_argument("--target-bw", action="store", dest="target_bw",
-                    help="specify the number of the target bandwidth "
-                        "with the --measure-pps option.")
+                    help="specify the list of the payload sizes.")
     ap.add_argument("--reverse", action="store_true", dest="reverse",
-                    help="specify to measure reversely.")
+                    help="specify to test reversely.")
     ap.add_argument("--parallel", action="store", dest="nb_parallel",
                     type=int, default=1,
                     help="specify the number of parallel clients to run.")
     ap.add_argument("--graph-bw", action="store_true", dest="make_bw_graph",
                     help="specify to make a bw graph.")
+    ap.add_argument("--graph-psize", action="store_true", dest="make_psize_graph",
+                    help="specify to make a psize graph.")
     ap.add_argument("--graph-pps", action="store_true", dest="make_pps_graph",
                     help="specify to make a pps graph.")
+    ap.add_argument("-x", action="store_true", dest="enable_test",
+                    help="specify to run test. it's for use of graph mode.")
     ap.add_argument("--save-dir", action="store", dest="result_dir",
                     help="specify the directory to save the result files.")
     ap.add_argument("--save-graph", action="store_true", dest="save_graph",
                     help="specify to save the graph. can be used with the --save-dir option.")
     ap.add_argument("--no-show-graph", action="store_false", dest="show_graph",
                     help="specify not to show the graph.")
+    ap.add_argument("--verbose", action="store_true", dest="verbose",
+                    help="enable verbose mode.")
     opt = ap.parse_args()
     # make directory if needed.
     if opt.result_dir is not None and not os.path.exists(opt.result_dir):
         os.mkdir(opt.result_dir)
-    # set bw list
-    opt.bw_list = get_test_list(
-            opt.measure_bw, opt.bw_list_str,
-            "1m,10m,20m,40m,60m,80m,100m")
-    # set psize list
-    opt.psize_list = get_test_list(
-            opt.measure_pps, opt.psize_list_str,
-            "16,32,64,128,256,512,768,1024,1280,1448")
-    #
-    if opt.measure_bw:
-        print("bandwidth test list:",
-              ",".join([str(n) for n in opt.bw_list]))
-        measure_bw(opt)
-    if opt.make_bw_graph:
-        if opt.bw_list is not None:
-            print("bandwidth test list:",
-                ",".join([str(n) for n in opt.bw_list]))
-        else:
-            print("bandwidth test list: all")
-        make_bw_graph(opt)
-    if opt.measure_pps:
-        if opt.target_bw is None:
-            print("ERROR: the --target-bw is required to measure the pps.")
-            exit(-1)
-        print("Target BW:", opt.target_bw)
-        print("packet size test list:",
-              ",".join([str(n) for n in opt.psize_list]))
-        measure_pps(opt)
-    if opt.make_pps_graph:
-        if opt.psize_list is not None:
-            print("packet size test list:",
-                ",".join([str(n) for n in opt.psize_list]))
-        else:
-            print("packet size test list: all")
-        make_pps_graph(opt)
+    # set bw_list and psize_list
+    opt.bw_list = get_test_list(opt.bw_list_str,
+        bw_profile[opt.bw_profile])
+    opt.psize_list = get_test_list(opt.psize_list_str,
+        "16,32,64,128,256,512,768,1024,1280,1448")
+    # do measure
+    if not(opt.make_bw_graph or opt.make_psize_graph or opt.make_pps_graph) or opt.enable_test:
+        measure(opt)
+    # make a graph.
+    if opt.make_bw_graph or opt.make_psize_graph or opt.make_pps_graph:
+        if opt.bw_list_str is None:
+            opt.bw_list = "*"
+        if opt.psize_list_str is None:
+            opt.psize_list = "*"
+        print("bandwidth:",
+            ",".join([str(n) for n in opt.bw_list]))
+        print("payload size:",
+            ",".join([str(n) for n in opt.psize_list]))
+        if opt.make_bw_graph:
+            make_bw_graph(opt)
+        if opt.make_psize_graph:
+            make_psize_graph(opt)
+        if opt.make_pps_graph:
+            make_pps_graph(opt)
 
 if __name__ == "__main__" :
     main()
