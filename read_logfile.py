@@ -1,9 +1,10 @@
 import re
 from utils import convert_xnum
 
-#
-# graph
-#
+"""
+file name:
+    e.g. iperf-host-sr-bw-940m-ps-512-20220803082844970472.txt
+"""
 re_cmdline = re.compile(
         "% iperf3 -u "
         "-c (?P<host>[^\s]+) "
@@ -19,7 +20,7 @@ re_result = re.compile(
         "(?P<bitrate>[\d\.]+)\s+(?P<bitrate_unit>(|[MKG]))bits/sec\s+"
         "(?P<jitter>[\d\.]+)\s+ms\s+"
         "(?P<lost>[\d\.]+)/(?P<total>[\d\.]+)\s+"
-        "\((?P<loss_rate>[\d\.]+)%\)\s+"
+        "\((?P<loss_rate>.+)%\)\s+"
         "(?P<role>sender|receiver)"
         ".*")
 
