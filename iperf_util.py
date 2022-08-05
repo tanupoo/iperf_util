@@ -194,6 +194,7 @@ def make_pps_graph(opt):
                         linestyle="solid")
     ax.legend(title="lost", frameon=False, prop={'size':8},
               bbox_to_anchor=(-.11, 0.8), loc="center right")
+    ax.set_ylim(0)
     ax.grid()
 
     ax3 = ax.twinx()
@@ -255,6 +256,7 @@ def make_bw_graph(opt):
                          alpha=0.5)
         ax2.legend(title="Lost", frameon=False, prop={'size':8},
                 bbox_to_anchor=(1.11, 0.8), loc="center left")
+        ax2.set_ylim(0)
 
     else:
         fig = plt.figure(figsize=(12,7))
@@ -288,6 +290,7 @@ def make_bw_graph(opt):
                              linestyle="dashed")
             ax2.legend(title="Lost", frameon=False, prop={'size':8},
                     bbox_to_anchor=(1.11, 0.8), loc="center left")
+        ax2.set_ylim(0)
 
     fig.tight_layout()
     if opt.save_graph:
