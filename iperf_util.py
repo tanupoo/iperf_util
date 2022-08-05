@@ -39,10 +39,6 @@ def iperf(cmd, output_file):
             fd.write(outs.decode())
 
 def measure(opt):
-    print("bitrate:",
-            ",".join([str(n) for n in opt.br_list]))
-    print("payload size:",
-            ",".join([str(n) for n in opt.psize_list]))
     cmd_fmt = "iperf3 -u -c {name} -P {nb_parallel} -b {{br}} -l {{psize}}".format(**{
             "name": opt.server_name,
             "nb_parallel": opt.nb_parallel})
@@ -109,6 +105,8 @@ def read_result(opt, x_axis):
     for br in opt.br_list:
         for psize in opt.psize_list:
             glob_name = template.format(**{"br": br, "psize": psize})
+            if opt.debug:
+                print(f"glob: {glob_name}")
             base_list.extend(glob.glob(glob_name))
     result = {}
     for fname in base_list:
@@ -339,6 +337,8 @@ def main():
                     help="specify not to show the graph.")
     ap.add_argument("--verbose", action="store_true", dest="verbose",
                     help="enable verbose mode.")
+    ap.add_argument("--debug", action="store_true", dest="debug",
+                    help="enable debug mode.")
     opt = ap.parse_args()
     # make directory if needed.
     if opt.result_dir is not None and not os.path.exists(opt.result_dir):
@@ -348,6 +348,10 @@ def main():
         br_profile[opt.br_profile])
     opt.psize_list = get_test_list(opt.psize_list_str,
         "16,32,64,128,256,512,768,1024,1280,1448")
+    print("bitrate:",
+        ",".join([str(n) for n in opt.br_list]))
+    print("payload size:",
+        ",".join([str(n) for n in opt.psize_list]))
     # do measure
     if not(opt.make_br_graph or opt.make_pps_graph) or opt.enable_test:
         measure(opt)
@@ -357,10 +361,6 @@ def main():
             opt.br_list = "*"
         if opt.psize_list_str is None:
             opt.psize_list = "*"
-        print("bitrate:",
-            ",".join([str(n) for n in opt.br_list]))
-        print("payload size:",
-            ",".join([str(n) for n in opt.psize_list]))
         if opt.make_br_graph:
             make_br_graph(opt)
         if opt.make_pps_graph:
