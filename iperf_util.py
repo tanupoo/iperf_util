@@ -39,25 +39,25 @@ def iperf(cmd, output_file):
             fd.write(outs.decode())
 
 def measure(opt):
-    print("bandwidth:",
-            ",".join([str(n) for n in opt.bw_list]))
+    print("bitrate:",
+            ",".join([str(n) for n in opt.br_list]))
     print("payload size:",
             ",".join([str(n) for n in opt.psize_list]))
-    cmd_fmt = "iperf3 -u -c {name} -P {nb_parallel} -b {{bw}} -l {{psize}}".format(**{
+    cmd_fmt = "iperf3 -u -c {name} -P {nb_parallel} -b {{br}} -l {{psize}}".format(**{
             "name": opt.server_name,
             "nb_parallel": opt.nb_parallel})
-    ofile_fmt = "{path}iperf-{name}-{dir}-bw-{{bw}}-ps-{{psize}}-{{id}}.txt".format(**{
+    ofile_fmt = "{path}iperf-{name}-{dir}-br-{{br}}-ps-{{psize}}-{{id}}.txt".format(**{
             "path": f"{opt.result_dir}/" if opt.result_dir else "",
             "name": opt.server_name,
             "dir": "rs" if opt.reverse else "sr"})
     if opt.reverse:
         cmd_fmt += " -R"
-    for bw in opt.bw_list:
+    for br in opt.br_list:
         for psize in opt.psize_list:
-            cmd = cmd_fmt.format(**{"bw":bw, "psize":psize})
+            cmd = cmd_fmt.format(**{"br":br, "psize":psize})
             print(cmd)
             output_file = ofile_fmt.format(**{
-                    "bw": bw,
+                    "br": br,
                     "psize": psize,
                     "id": datetime.now().strftime("%Y%m%d%H%M%S%f")
                     })
@@ -82,13 +82,13 @@ def print_result(result, x_axis):
         for k2 in sorted(result[k1].keys()):
             d = result[k1][k2]
             if x_axis == "br":
-                bw = k2
+                br = k2
                 psize = k1
             else:
-                bw = k1
+                br = k1
                 psize = k2
             print(fmt.format(
-                round(bw/1e6,2),
+                round(br/1e6,2),
                 psize,
                 round(d["send_br"]/1e6,2),
                 round(d["recv_br"]/1e6,2),
@@ -99,31 +99,31 @@ def print_result(result, x_axis):
 
 def read_result(opt, x_axis):
     assert x_axis in ["br", "psize"]
-    template = "{path}iperf-{name}-{dir}-bw-{{bw}}-ps-{{psize}}-*.txt".format(
+    template = "{path}iperf-{name}-{dir}-br-{{br}}-ps-{{psize}}-*.txt".format(
             **{
             "path": f"{opt.result_dir}/" if opt.result_dir else "",
             "name": opt.server_name,
             "dir": "rs" if opt.reverse else "sr"
             })
     base_list = []
-    for bw in opt.bw_list:
+    for br in opt.br_list:
         for psize in opt.psize_list:
-            glob_name = template.format(**{"bw": bw, "psize": psize})
+            glob_name = template.format(**{"br": br, "psize": psize})
             base_list.extend(glob.glob(glob_name))
     result = {}
     for fname in base_list:
         r = re.match(".*iperf-"
                      "[^-]+-"
                      "[^-]+-"
-                     "bw-([^-]+)-"
+                     "br-([^-]+)-"
                      "ps-([^-]+)-"
                      ".*.txt", fname)
         if r:
             if x_axis == "br":
                 k1 = r.group(2) # psize
-                k2 = r.group(1) # bw
+                k2 = r.group(1) # br
             else:
-                k1 = r.group(1) # bw
+                k1 = r.group(1) # br
                 k2 = r.group(2) # psize
             x0 = result.setdefault(convert_xnum(k1), {})
             x1 = x0.setdefault(convert_xnum(k2), {
@@ -214,7 +214,7 @@ def make_pps_graph(opt):
     if opt.show_graph:
         plt.show()
 
-def make_bw_graph(opt):
+def make_br_graph(opt):
     """
     to show how much bitrate can be properly used with a certain packet size.
     """
@@ -294,11 +294,11 @@ def make_bw_graph(opt):
 
     fig.tight_layout()
     if opt.save_graph:
-        save_graph(opt, "bw")
+        save_graph(opt, "br")
     if opt.show_graph:
         plt.show()
 
-bw_profile = {
+br_profile = {
     "1g": "1m,100m,200m,400m,600m,700m,800m,900m,1000m",
     "100m": "1m,10m,20m,40m,60m,70m,80m,90m,100m",
     "50m": "1m,10m,20m,30m,35m,40m,45m,50m",
@@ -310,13 +310,13 @@ def main():
             description="a utility for iperf3",
             formatter_class=ArgumentDefaultsHelpFormatter)
     ap.add_argument("server_name", help="server name")
-    ap.add_argument("--profile", action="store", dest="bw_profile",
+    ap.add_argument("--profile", action="store", dest="br_profile",
                     choices=["1g","100m","50m","10m"],
                     default="100m",
                     help="specify not to test.")
-    ap.add_argument("--bw-list", metavar="BW_SPEC", action="store",
-                    dest="bw_list_str",
-                    help="specify the list of the bandwidths.")
+    ap.add_argument("--br-list", metavar="BR_SPEC", action="store",
+                    dest="br_list_str",
+                    help="specify the list of the bitrate.")
     ap.add_argument("--psize-list", metavar="PSIZE_SPEC", action="store",
                     dest="psize_list_str",
                     help="specify the list of the payload sizes.")
@@ -325,8 +325,8 @@ def main():
     ap.add_argument("--parallel", action="store", dest="nb_parallel",
                     type=int, default=1,
                     help="specify the number of parallel clients to run.")
-    ap.add_argument("--graph-bw", action="store_true", dest="make_bw_graph",
-                    help="specify to make a bw graph.")
+    ap.add_argument("--graph-br", action="store_true", dest="make_br_graph",
+                    help="specify to make a br graph.")
     ap.add_argument("--graph-pps", action="store_true", dest="make_pps_graph",
                     help="specify to make a pps graph.")
     ap.add_argument("-x", action="store_true", dest="enable_test",
@@ -343,26 +343,26 @@ def main():
     # make directory if needed.
     if opt.result_dir is not None and not os.path.exists(opt.result_dir):
         os.mkdir(opt.result_dir)
-    # set bw_list and psize_list
-    opt.bw_list = get_test_list(opt.bw_list_str,
-        bw_profile[opt.bw_profile])
+    # set br_list and psize_list
+    opt.br_list = get_test_list(opt.br_list_str,
+        br_profile[opt.br_profile])
     opt.psize_list = get_test_list(opt.psize_list_str,
         "16,32,64,128,256,512,768,1024,1280,1448")
     # do measure
-    if not(opt.make_bw_graph or opt.make_pps_graph) or opt.enable_test:
+    if not(opt.make_br_graph or opt.make_pps_graph) or opt.enable_test:
         measure(opt)
     # make a graph.
-    if opt.make_bw_graph or opt.make_pps_graph:
-        if opt.bw_list_str is None:
-            opt.bw_list = "*"
+    if opt.make_br_graph or opt.make_pps_graph:
+        if opt.br_list_str is None:
+            opt.br_list = "*"
         if opt.psize_list_str is None:
             opt.psize_list = "*"
-        print("bandwidth:",
-            ",".join([str(n) for n in opt.bw_list]))
+        print("bitrate:",
+            ",".join([str(n) for n in opt.br_list]))
         print("payload size:",
             ",".join([str(n) for n in opt.psize_list]))
-        if opt.make_bw_graph:
-            make_bw_graph(opt)
+        if opt.make_br_graph:
+            make_br_graph(opt)
         if opt.make_pps_graph:
             make_pps_graph(opt)
 
