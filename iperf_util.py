@@ -163,19 +163,13 @@ def read_result(opt, x_axis):
     print_result(result, x_axis)
     return result
 
-def save_graph(opt):
-    if opt.make_bw_graph:
-        ofile = "{path}iperf-{name}-{dir}-bw.png".format(**{
-                "path": f"{opt.result_dir}/" if opt.result_dir else "",
-                "name": opt.server_name,
-                "dir": "rs" if opt.reverse else "sr"})
-        plt.savefig(ofile)
-    if opt.make_psize_graph:
-        ofile = "{path}iperf-{name}-{dir}-psize.png".format(**{
-                "path": f"{opt.result_dir}/" if opt.result_dir else "",
-                "name": opt.server_name,
-                "dir": "rs" if opt.reverse else "sr"})
-        plt.savefig(ofile)
+def save_graph(opt, graph_name):
+    ofile = "{path}iperf-{name}-{dir}-{graph_name}.png".format(**{
+            "path": f"{opt.result_dir}/" if opt.result_dir else "",
+            "name": opt.server_name,
+            "dir": "rs" if opt.reverse else "sr",
+            "graph": graph_name})
+    plt.savefig(ofile)
 
 def make_pps_graph(opt):
     result = read_result(opt, "br")
@@ -202,7 +196,7 @@ def make_pps_graph(opt):
     ax.grid()
     fig.tight_layout()
     if opt.save_graph:
-        save_graph(opt)
+        save_graph(opt, "pps")
     if opt.show_graph:
         plt.show()
 
@@ -281,7 +275,7 @@ def make_bw_graph(opt):
     ax.grid()
     fig.tight_layout()
     if opt.save_graph:
-        save_graph(opt)
+        save_graph(opt, "bw")
     if opt.show_graph:
         plt.show()
 
@@ -319,7 +313,7 @@ def make_psize_graph(opt):
     ax.grid()
     fig.tight_layout()
     if opt.save_graph:
-        save_graph(opt)
+        save_graph(opt, "psize")
     if opt.show_graph:
         plt.show()
 
