@@ -295,44 +295,6 @@ def make_bw_graph(opt):
     if opt.show_graph:
         plt.show()
 
-def make_psize_graph(opt):
-    result = read_result(opt, "psize")
-
-    if len(result.keys()) == 1:
-        bw = list(result.keys())[0]
-        pss = result[bw]
-        #
-        fig = plt.figure()
-        fig.suptitle("PPS {}Mbps: {}".format(
-                result["target_br"][0]/1e6,
-                "server to client" if opt.reverse else "client to server"))
-        ax = fig.add_subplot(1,1,1)
-        ax.set_xlabel("Packet Size(bytes)")
-
-        line1 = ax.plot(result["base_psize"], result["receiver_bps"],
-                        label="bps", color="#d55e00")
-        ax.set_ylabel("Receiver (bps)", color=line1[0].get_color())
-
-        ax2 = ax.twinx()
-        line2 = ax2.plot(result["base_psize"], result["lost_percent"],
-                        label="lost%", color="#f0e442")
-        ax2.set_ylabel("Lost%", color=line2[0].get_color())
-
-        ax3 = ax.twinx()
-        line3 = ax3.plot(result["base_psize"], result["jitter_ms"],
-                        label="jitter", color="#009e73", alpha=0.5)
-        ax3.set_ylabel("Jitter(ms)", color=line3[0].get_color())
-        ax3.spines["right"].set_position(("outward", 50))
-    else:
-        raise NotImplemented("ERROR")
-
-    ax.grid()
-    fig.tight_layout()
-    if opt.save_graph:
-        save_graph(opt, "psize")
-    if opt.show_graph:
-        plt.show()
-
 bw_profile = {
     "1g": "1m,100m,200m,400m,600m,700m,800m,900m,1000m",
     "100m": "1m,10m,20m,40m,60m,70m,80m,90m,100m",
@@ -362,8 +324,6 @@ def main():
                     help="specify the number of parallel clients to run.")
     ap.add_argument("--graph-bw", action="store_true", dest="make_bw_graph",
                     help="specify to make a bw graph.")
-    ap.add_argument("--graph-psize", action="store_true", dest="make_psize_graph",
-                    help="specify to make a psize graph.")
     ap.add_argument("--graph-pps", action="store_true", dest="make_pps_graph",
                     help="specify to make a pps graph.")
     ap.add_argument("-x", action="store_true", dest="enable_test",
@@ -386,10 +346,10 @@ def main():
     opt.psize_list = get_test_list(opt.psize_list_str,
         "16,32,64,128,256,512,768,1024,1280,1448")
     # do measure
-    if not(opt.make_bw_graph or opt.make_psize_graph or opt.make_pps_graph) or opt.enable_test:
+    if not(opt.make_bw_graph or opt.make_pps_graph) or opt.enable_test:
         measure(opt)
     # make a graph.
-    if opt.make_bw_graph or opt.make_psize_graph or opt.make_pps_graph:
+    if opt.make_bw_graph or opt.make_pps_graph:
         if opt.bw_list_str is None:
             opt.bw_list = "*"
         if opt.psize_list_str is None:
@@ -400,8 +360,6 @@ def main():
             ",".join([str(n) for n in opt.psize_list]))
         if opt.make_bw_graph:
             make_bw_graph(opt)
-        if opt.make_psize_graph:
-            make_psize_graph(opt)
         if opt.make_pps_graph:
             make_pps_graph(opt)
 
