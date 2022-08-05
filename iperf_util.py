@@ -172,6 +172,9 @@ def save_graph(opt, graph_name):
     plt.savefig(ofile)
 
 def make_pps_graph(opt):
+    """
+    to show how many packets with a fixed size can be properly transmitted in a second.
+    """
     result = read_result(opt, "br")
 
     #fig = plt.figure(figsize=(9,5))
@@ -211,78 +214,81 @@ def make_pps_graph(opt):
         plt.show()
 
 def make_bw_graph(opt):
+    """
+    to show how much bitrate can be properly used with a certain packet size.
+    """
     result = read_result(opt, "br")
 
     if len(result.keys()) == 1:
         psize = list(result.keys())[0]
-        brs = result[psize]
         #
         fig = plt.figure()
-        fig.suptitle(f"{psize} B")
+        fig.suptitle(f"Tx and Rx bitrate, payload size = {psize} B")
         ax = fig.add_subplot(1,1,1)
+
+        ax.set_xlabel("Tx Rate (Mbps)")
+        ax.set_ylabel("Rx Rate (Mbps)")
+
+        brs = result[psize]
+
         # reference
         x0 = sorted([i/1e6 for i in sorted(brs)])
-        line0 = ax.plot(x0, x0, label="tx_br", color="k", alpha=0.2,
+        line0 = ax.plot(x0, x0, label="Ref.", color="k", alpha=0.2,
                         linestyle="dashed")
-        ax.set_xlabel("Tx Rate (Mbps)")
 
+        # result
         x = [brs[br]["send_br"]/1e6 for br in sorted(brs)]
-
         line1 = ax.plot(x,
                         [brs[br]["recv_br"]/1e6 for br in sorted(brs)],
-                        label="rx_br", color="#d55e00",
+                        label=f"{psize}",
                         marker="o",
                         linestyle="solid")
-        ax.set_ylabel("Rx Rate (Mbps)", color=line1[0].get_color())
+        ax.legend(title="Rx rate", frameon=False, prop={'size':8},
+                bbox_to_anchor=(-.11, 0.8), loc="center right")
+        ax.grid()
 
         ax2 = ax.twinx()
+        ax2.set_ylabel("Rx Lost (%)")
         line2 = ax2.plot(x,
-                        [brs[br]["lost"] for br in sorted(brs)],
-                        label="lost%", color="#f0e442")
-        ax2.set_ylabel("Lost%", color=line2[0].get_color())
-
-        ax3 = ax.twinx()
-        line3 = ax3.plot(x,
-                        [brs[br]["jitter"] for br in sorted(brs)],
-                        label="jitter", color="#009e73", alpha=0.5)
-        ax3.set_ylabel("Jitter(ms)", color=line3[0].get_color())
-        ax3.spines["right"].set_position(("outward", 50))
-
-        ax4 = ax.twinx()
-        line4 = ax4.plot(x,
-                        [brs[br]["recv_pps"] for br in sorted(brs)],
-                        label="pps", color="#d022d5", alpha=0.5)
-        ax4.spines["left"].set_visible(True)
-        ax4.spines["left"].set_position(("outward", 50))
-        ax4.yaxis.set_label_position('left')
-        ax4.yaxis.set_ticks_position('left')
-        ax4.set_ylabel("pps", color=line4[0].get_color())
+                         [brs[br]["lost"] for br in sorted(brs)],
+                         label=f"{psize}",
+                         alpha=0.5)
+        ax2.legend(title="Lost", frameon=False, prop={'size':8},
+                bbox_to_anchor=(1.11, 0.8), loc="center left")
 
     else:
-        fig = plt.figure()
-        fig.suptitle(f"M BW")
-        ax = fig.add_subplot(1,1,1)
-        # reference
-        x0 = sorted([i/1e6 for i in sorted(result[list(result.keys())[0]])])
-        line0 = ax.plot(x0, x0, label="tx_br", color="k", alpha=0.2,
-                        linestyle="dashed")
-        ax.set_xlabel("Tx Rate (Mbps)")
+        fig = plt.figure(figsize=(12,7))
+        fig.suptitle(f"Tx and Rx bitrate")
+        ax1 = fig.add_subplot(1,1,1)
+
+        ax1.set_xlabel("Tx Rate (Mbps)")
+        ax1.set_ylabel("Rx Rate (Mbps)")
 
         for psize in sorted(result.keys()):
             brs = result[psize]
             x = [brs[br]["send_br"]/1e6 for br in sorted(brs)]
-            """
-            line0 = ax.plot(x0, x0,
-                            label=f"send_br_{psize}", color="k", alpha=0.2)
-            """
+            line1 = ax1.plot(x,
+                             [brs[br]["recv_br"]/1e6 for br in sorted(brs)],
+                             label=f"{psize}",
+                             marker="o",
+                             linestyle="solid")
+            ax1.legend(title="Rx rate", frameon=False, prop={'size':8},
+                    bbox_to_anchor=(-.11, 0.8), loc="center right")
+            ax1.grid()
 
-            line1 = ax.plot([brs[br]["send_br"]/1e6 for br in sorted(brs)],
-                            [brs[br]["recv_br"]/1e6 for br in sorted(brs)],
-                            label=f"recv_br_{psize}")
-            ax.set_ylabel("Rx Rate (Mbps)", color=line1[0].get_color())
-        plt.legend()
+        ax2 = ax1.twinx()
+        ax2.set_ylabel("Rx Lost (%)")
+        for psize in sorted(result.keys()):
+            brs = result[psize]
+            x = [brs[br]["send_br"]/1e6 for br in sorted(brs)]
+            line2 = ax2.plot(x,
+                             [brs[br]["lost"] for br in sorted(brs)],
+                             label=f"{psize}",
+                             #alpha=0.5,
+                             linestyle="dashed")
+            ax2.legend(title="Lost", frameon=False, prop={'size':8},
+                    bbox_to_anchor=(1.11, 0.8), loc="center left")
 
-    ax.grid()
     fig.tight_layout()
     if opt.save_graph:
         save_graph(opt, "bw")
