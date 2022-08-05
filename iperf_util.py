@@ -164,36 +164,46 @@ def read_result(opt, x_axis):
     return result
 
 def save_graph(opt, graph_name):
-    ofile = "{path}iperf-{name}-{dir}-{graph_name}.png".format(**{
+    ofile = "{path}iperf-{name}-{dir}-{gname}.png".format(**{
             "path": f"{opt.result_dir}/" if opt.result_dir else "",
             "name": opt.server_name,
             "dir": "rs" if opt.reverse else "sr",
-            "graph": graph_name})
+            "gname": graph_name})
     plt.savefig(ofile)
 
 def make_pps_graph(opt):
     result = read_result(opt, "br")
 
-    fig = plt.figure()
-    fig.suptitle(f"M BW")
+    #fig = plt.figure(figsize=(9,5))
+    fig = plt.figure(figsize=(12,7))
+    fig.suptitle(f"PPS and Lost")
     ax = fig.add_subplot(1,1,1)
-    """
-    # reference
-    x0 = sorted([i/1e6 for i in sorted(result[list(result.keys())[0]])])
-    line0 = ax.plot(x0, x0, label="tx_br", color="k", alpha=0.2,
-                    linestyle="dashed")
-    """
 
     ax.set_xlabel("Tx PPS")
     ax.set_ylabel("Rx Lost (%)")
     for psize in sorted(result.keys()):
         brs = result[psize]
-        line1 = ax.plot([brs[br]["send_pps"]/1e6 for br in sorted(brs)],
-                        [brs[br]["lost"]/1e6 for br in sorted(brs)],
-                        label=f"{psize}")
-    plt.legend()
-
+        x = [brs[br]["send_pps"]/1e6 for br in sorted(brs)]
+        line1 = ax.plot(x,
+                        [brs[br]["lost"] for br in sorted(brs)],
+                        label=f"{psize}",
+                        marker="o",
+                        linestyle="solid")
+    ax.legend(title="lost", frameon=False, prop={'size':8},
+              bbox_to_anchor=(-.11, 0.8), loc="center right")
     ax.grid()
+
+    ax3 = ax.twinx()
+    ax3.set_ylabel("Jitter(ms)")
+    for psize in sorted(result.keys()):
+        brs = result[psize]
+        x = [brs[br]["send_pps"]/1e6 for br in sorted(brs)]
+        line3 = ax3.plot(x,
+                         [brs[br]["jitter"] for br in sorted(brs)],
+                         label=f"{psize}", alpha=0.5)
+    ax3.legend(title="jitter", frameon=False, prop={'size':8},
+               bbox_to_anchor=(1.11, 0.8), loc="center left")
+
     fig.tight_layout()
     if opt.save_graph:
         save_graph(opt, "pps")
