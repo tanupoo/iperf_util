@@ -308,6 +308,8 @@ def main():
             description="a utility for iperf3",
             formatter_class=ArgumentDefaultsHelpFormatter)
     ap.add_argument("server_name", help="server name")
+    ap.add_argument("-x", action="store_true", dest="do_test",
+                    help="specify to run test.")
     ap.add_argument("--profile", action="store", dest="br_profile",
                     choices=["1g","100m","50m","10m"],
                     default="100m",
@@ -327,8 +329,6 @@ def main():
                     help="specify to make a br graph.")
     ap.add_argument("--graph-pps", action="store_true", dest="make_pps_graph",
                     help="specify to make a pps graph.")
-    ap.add_argument("-x", action="store_true", dest="enable_test",
-                    help="specify to run test. it's for use of graph mode.")
     ap.add_argument("--save-dir", action="store", dest="result_dir",
                     help="specify the directory to save the result files.")
     ap.add_argument("--save-graph", action="store_true", dest="save_graph",
@@ -353,7 +353,7 @@ def main():
     print("payload size:",
         ",".join([str(n) for n in opt.psize_list]))
     # do measure
-    if not(opt.make_br_graph or opt.make_pps_graph) or opt.enable_test:
+    if opt.do_test:
         measure(opt)
     # make a graph.
     if opt.make_br_graph or opt.make_pps_graph:
