@@ -173,38 +173,65 @@ def make_pps_graph(opt):
     """
     to show how many packets with a fixed size can be properly transmitted in a second.
     """
-    result = read_result(opt, "br")
+    if len(opt.br_list) == 1 and opt.br_list != "*":
+        result = read_result(opt, "psize")
+        k1 = list(result.keys())[0]
+        fig = plt.figure()
+        fig.suptitle(f"PPS and Lost, bitrate = {k1} bps")
+        ax1 = fig.add_subplot(1,1,1)
 
-    #fig = plt.figure(figsize=(9,5))
-    fig = plt.figure(figsize=(12,7))
-    fig.suptitle(f"PPS and Lost")
-    ax = fig.add_subplot(1,1,1)
+        ax1.set_xlabel("Tx PPS")
+        ax1.set_ylabel("Rx Lost (%)")
 
-    ax.set_xlabel("Tx PPS")
-    ax.set_ylabel("Rx Lost (%)")
-    for psize in sorted(result.keys()):
-        brs = result[psize]
+        brs = result[k1]
         x = [brs[br]["send_pps"]/1e6 for br in sorted(brs)]
-        line1 = ax.plot(x,
+        line1 = ax1.plot(x,
                         [brs[br]["lost"] for br in sorted(brs)],
-                        label=f"{psize}",
+                        label=f"{k1}",
                         marker="o",
                         linestyle="solid")
-    ax.legend(title="lost", frameon=False, prop={'size':8},
-              bbox_to_anchor=(-.11, 0.8), loc="center right")
-    ax.set_ylim(0)
-    ax.grid()
+        ax1.set_ylim(0)
+        ax1.grid()
 
-    ax3 = ax.twinx()
-    ax3.set_ylabel("Jitter(ms)")
-    for psize in sorted(result.keys()):
-        brs = result[psize]
-        x = [brs[br]["send_pps"]/1e6 for br in sorted(brs)]
-        line3 = ax3.plot(x,
+        ax2 = ax1.twinx()
+        ax2.set_ylabel("Jitter(ms)")
+        line2 = ax2.plot(x,
                          [brs[br]["jitter"] for br in sorted(brs)],
-                         label=f"{psize}", alpha=0.5)
-    ax3.legend(title="jitter", frameon=False, prop={'size':8},
-               bbox_to_anchor=(1.11, 0.8), loc="center left")
+                         label=f"{k1}",
+                         alpha=0.5)
+
+    else:
+        result = read_result(opt, "br")
+        #fig = plt.figure(figsize=(9,5))
+        fig = plt.figure(figsize=(12,7))
+        fig.suptitle(f"PPS and Lost")
+        ax = fig.add_subplot(1,1,1)
+
+        ax.set_xlabel("Tx PPS")
+        ax.set_ylabel("Rx Lost (%)")
+        for psize in sorted(result.keys()):
+            brs = result[psize]
+            x = [brs[br]["send_pps"]/1e6 for br in sorted(brs)]
+            line1 = ax.plot(x,
+                            [brs[br]["lost"] for br in sorted(brs)],
+                            label=f"{psize}",
+                            marker="o",
+                            linestyle="solid")
+        ax.legend(title="lost", frameon=False, prop={'size':8},
+                bbox_to_anchor=(-.11, 0.8), loc="center right")
+        ax.set_ylim(0)
+        ax.grid()
+
+        ax3 = ax.twinx()
+        ax3.set_ylabel("Jitter(ms)")
+        for psize in sorted(result.keys()):
+            brs = result[psize]
+            x = [brs[br]["send_pps"]/1e6 for br in sorted(brs)]
+            line3 = ax3.plot(x,
+                            [brs[br]["jitter"] for br in sorted(brs)],
+                            label=f"{psize}", alpha=0.5)
+        ax3.legend(title="jitter", frameon=False, prop={'size':8},
+                bbox_to_anchor=(1.11, 0.8), loc="center left")
 
     fig.tight_layout()
     if opt.save_graph:
@@ -300,6 +327,7 @@ br_profile = {
     "1g": "1m,100m,200m,400m,600m,700m,800m,900m,1000m",
     "100m": "1m,10m,20m,40m,60m,70m,80m,90m,100m",
     "50m": "1m,10m,20m,30m,35m,40m,45m,50m",
+    "20m": "1m,4m,8m,10m,12m,14m,16m,18m,20m",
     "10m": "1m,2m,4m,6m,7m,8m,9m,10m",
     }
 
