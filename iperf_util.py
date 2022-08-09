@@ -168,6 +168,7 @@ def save_graph(opt, graph_name):
             "dir": "rs" if opt.reverse else "sr",
             "gname": graph_name})
     plt.savefig(ofile)
+    print(f"saved to {ofile}")
 
 def make_pps_graph(opt):
     """
