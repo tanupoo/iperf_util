@@ -5,11 +5,10 @@ import shlex
 import matplotlib.pyplot as plt
 import glob
 import os
-from datetime import datetime
 import re
 from argparse import ArgumentParser
 from argparse import ArgumentDefaultsHelpFormatter
-from utils import convert_xnum, get_test_list
+from utils import get_ts, convert_xnum, get_test_list
 from read_logfile import read_logfile
 import json
 from statistics import mean
@@ -55,7 +54,7 @@ def measure(opt):
             output_file = ofile_fmt.format(**{
                     "br": br,
                     "psize": psize,
-                    "id": datetime.now().strftime("%Y%m%d%H%M%S%f")
+                    "id": get_ts(),
                     })
             iperf(cmd, output_file)
 
@@ -162,11 +161,12 @@ def read_result(opt, x_axis):
     return result
 
 def save_graph(opt, graph_name):
-    ofile = "{path}iperf-{name}-{dir}-{gname}.png".format(**{
+    ofile = "{path}iperf-{name}-{dir}-{gname}-{ts}.png".format(**{
             "path": f"{opt.result_dir}/" if opt.result_dir else "",
             "name": opt.server_name,
             "dir": "rs" if opt.reverse else "sr",
-            "gname": graph_name})
+            "gname": graph_name,
+            "ts": get_ts()})
     plt.savefig(ofile)
     print(f"saved to {ofile}")
 

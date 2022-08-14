@@ -1,4 +1,12 @@
 
+from datetime import datetime
+
+def get_ts():
+    """
+    return a string of timestamp.
+    """
+    return datetime.now().strftime("%Y%m%d%H%M%S%f")
+
 def convert_xnum(n):
     if n.find(".") > 0:
         # float
