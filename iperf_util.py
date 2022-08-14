@@ -251,38 +251,54 @@ def make_br_graph(opt):
         #
         fig = plt.figure()
         fig.suptitle(f"Tx and Rx bitrate, payload size = {psize} B")
-        ax = fig.add_subplot(1,1,1)
+        ax1 = fig.add_subplot(1,1,1)
 
-        ax.set_xlabel("Tx Rate (Mbps)")
-        ax.set_ylabel("Rx Rate (Mbps)")
+        ax1.set_xlabel("Tx Rate (Mbps)")
+        ax1.set_ylabel("Rx Rate (Mbps)")
 
         brs = result[psize]
 
         # reference
         x0 = sorted([i/1e6 for i in sorted(brs)])
-        line0 = ax.plot(x0, x0, label="Ref.", color="k", alpha=0.2,
+        line0 = ax1.plot(x0, x0, label="Ref.", color="k", alpha=0.2,
                         linestyle="dashed")
 
         # result
+        lines = []
         x = [brs[br]["send_br"]/1e6 for br in sorted(brs)]
-        line1 = ax.plot(x,
-                        [brs[br]["recv_br"]/1e6 for br in sorted(brs)],
-                        label=f"{psize}",
-                        marker="o",
-                        linestyle="solid")
-        ax.legend(title="Rx rate", frameon=False, prop={'size':8},
-                bbox_to_anchor=(-.11, 0.8), loc="center right")
-        ax.grid()
+        ax1.grid()
+        lines += ax1.plot(x,
+                          [brs[br]["recv_br"]/1e6 for br in sorted(brs)],
+                          label="Bitrate (bps)",
+                          color=plt.cm.viridis(0.2),
+                          marker="o",
+                          linestyle="solid")
 
-        ax2 = ax.twinx()
+        ax2 = ax1.twinx()
         ax2.set_ylabel("Rx Lost (%)")
-        line2 = ax2.plot(x,
-                         [brs[br]["lost"] for br in sorted(brs)],
-                         label=f"{psize}",
-                         alpha=0.5)
-        ax2.legend(title="Lost", frameon=False, prop={'size':8},
-                bbox_to_anchor=(1.11, 0.8), loc="center left")
-        ax2.set_ylim(0)
+        ax2.set_ylim(0,100)
+        lines += ax2.plot(x,
+                          [brs[br]["lost"] for br in sorted(brs)],
+                          label="Lost (%)",
+                          color=plt.cm.viridis(0.9),
+                          alpha=0.5)
+
+        ax3 = ax1.twinx()
+        ax3.set_visible(True)
+        ax3.set_ylabel("Avr. Jitter (ms)")
+        ax3.set_ylim(0,10)
+        ax3.spines["right"].set_position(("outward", 50))
+        ax3.yaxis.set_label_position('right')
+        ax3.yaxis.set_ticks_position('right')
+        lines += ax3.plot(x,
+                          [brs[br]["jitter"] for br in sorted(brs)],
+                          label="Jitter (ms))",
+                          color=plt.cm.viridis(0.5),
+                          alpha=0.5)
+
+        ax1.legend(handles=lines,
+                   bbox_to_anchor=(0.5, 1.1), loc="upper center",
+                   ncol=3, frameon=False)
 
     else:
         fig = plt.figure(figsize=(12,7))
