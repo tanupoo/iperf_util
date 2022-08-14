@@ -376,8 +376,10 @@ def main():
                     help="specify to make a pps graph.")
     ap.add_argument("--save-dir", action="store", dest="result_dir",
                     help="specify the directory to save the result files.")
-    ap.add_argument("--save-graph", action="store_true", dest="save_graph",
-                    help="specify to save the graph. can be used with the --save-dir option.")
+    ap.add_argument("--save-graph", "-S",
+                    action="store_true", dest="save_graph",
+                    help="specify to save the graph. "
+                        "can be used with the --save-dir option.")
     ap.add_argument("--no-show-graph", action="store_false", dest="show_graph",
                     help="specify not to show the graph.")
     ap.add_argument("--verbose", action="store_true", dest="verbose",
