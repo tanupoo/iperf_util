@@ -273,6 +273,8 @@ def make_br_graph(opt):
                           color=plt.cm.viridis(0.2),
                           marker="o",
                           linestyle="solid")
+        ax1.set_xlim(0)
+        ax1.set_ylim(0)
 
         ax2 = ax1.twinx()
         ax2.set_ylabel("Rx Lost (%)")
@@ -308,6 +310,12 @@ def make_br_graph(opt):
         ax1.set_xlabel("Tx Rate (Mbps)")
         ax1.set_ylabel("Rx Rate (Mbps)")
 
+        # reference
+        brs = list(result.values())[0]
+        x0 = sorted([i/1e6 for i in sorted(brs)])
+        line0 = ax1.plot(x0, x0, label="Ref.", color="k", alpha=0.2,
+                        linestyle="dashed")
+
         for psize in sorted(result.keys()):
             brs = result[psize]
             x = [brs[br]["send_br"]/1e6 for br in sorted(brs)]
@@ -319,6 +327,8 @@ def make_br_graph(opt):
             ax1.legend(title="Rx rate", frameon=False, prop={'size':8},
                     bbox_to_anchor=(-.11, 0.8), loc="center right")
             ax1.grid()
+        ax1.set_xlim(0)
+        ax1.set_ylim(0)
 
         ax2 = ax1.twinx()
         ax2.set_ylabel("Rx Lost (%)")
