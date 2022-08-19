@@ -410,7 +410,8 @@ def make_tx_graph(opt):
                              linestyle="solid")
             ax1.legend(title="Rx rate", frameon=False, prop={'size':8},
                     bbox_to_anchor=(-.11, 0.8), loc="center right")
-            ax1.grid()
+
+        ax1.grid()
         ax1.set_xlim(0)
         ax1.set_ylim(0)
 
