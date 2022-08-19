@@ -38,9 +38,10 @@ def iperf(cmd, output_file):
             fd.write(outs.decode())
 
 def measure(opt):
-    cmd_fmt = "iperf3 -u -c {name} -P {nb_parallel} -b {{br}} -l {{psize}}".format(**{
+    cmd_fmt = "iperf3 -u -c {name} -P {nb_parallel} -t {time} -b {{br}} -l {{psize}}".format(**{
             "name": opt.server_name,
-            "nb_parallel": opt.nb_parallel})
+            "nb_parallel": opt.nb_parallel,
+            "time": opt.measure_time})
     ofile_fmt = "{path}iperf-{name}-{dir}-br-{{br}}-ps-{{psize}}-{{id}}.txt".format(**{
             "path": f"{opt.result_dir}/" if opt.result_dir else "",
             "name": opt.server_name,
@@ -459,6 +460,9 @@ def main():
     ap.add_argument("--parallel", action="store", dest="nb_parallel",
                     type=int, default=1,
                     help="specify the number of parallel clients to run.")
+    ap.add_argument("--measure-time", action="store", dest="measure_time",
+                    type=int, default=10,
+                    help="specify a time to measure one.")
     ap.add_argument("--graph-br", action="store_true", dest="make_br_graph",
                     help="specify to make a br graph.")
     ap.add_argument("--graph-pps", action="store_true", dest="make_pps_graph",
@@ -482,13 +486,18 @@ def main():
     if opt.result_dir is not None and not os.path.exists(opt.result_dir):
         os.mkdir(opt.result_dir)
     # set br_list and psize_list
-    opt.br_list = get_test_list(opt.br_list_str, br_profile["100m"])
+    opt.br_list = get_test_list(opt.br_list_str,
+                                br_profile["100m"] if opt.br_profile is None else
+                                br_profile[opt.br_profile])
     opt.psize_list = get_test_list(opt.psize_list_str,
         "16,32,64,128,256,512,768,1024,1280,1448")
-    print("bitrate:",
-        ",".join([str(n) for n in opt.br_list]))
-    print("payload size:",
-        ",".join([str(n) for n in opt.psize_list]))
+    if not (opt.make_br_graph or opt.make_pps_graph or opt.make_tx_graph):
+        print("bitrate:",
+            ",".join([str(n) for n in opt.br_list]))
+        print("payload size:",
+            ",".join([str(n) for n in opt.psize_list]))
+        t = opt.measure_time * len(opt.br_list) * len(opt.psize_list)
+        print(f"measure time: {t} seconds")
     # do measure
     if opt.do_test:
         measure(opt)
