@@ -350,6 +350,76 @@ def make_br_graph(opt):
     if opt.show_graph:
         plt.show()
 
+def make_tx_graph(opt):
+    """
+    to show status of Tx, to show if Tx transmits the packets properly.
+    """
+    result = read_result(opt, "br")
+
+    if len(result.keys()) == 1:
+        psize = list(result.keys())[0]
+        #
+        fig = plt.figure()
+        fig.suptitle(f"Expected Tx, and real Tx bitrate, payload size = {psize} B")
+        ax1 = fig.add_subplot(1,1,1)
+
+        ax1.set_xlabel("Expected Tx Rate (Mbps)")
+        ax1.set_ylabel("Measured Tx Rate (Mbps)")
+
+        brs = result[psize]
+
+        # reference
+        x0 = sorted([i/1e6 for i in sorted(brs)])
+        line0 = ax1.plot(x0, x0, label="Ref.", color="k", alpha=0.2,
+                        linestyle="dashed")
+
+        # result
+        lines = []
+        x = x0
+        ax1.grid()
+        lines += ax1.plot(x,
+                          [brs[br]["send_br"]/1e6 for br in sorted(brs)],
+                          label="Bitrate (bps)",
+                          color=plt.cm.viridis(0.2),
+                          marker="o",
+                          linestyle="solid")
+        ax1.set_xlim(0)
+        ax1.set_ylim(0)
+
+    else:
+        fig = plt.figure(figsize=(12,7))
+        fig.suptitle(f"Expected Tx, and real Tx bitrate")
+        ax1 = fig.add_subplot(1,1,1)
+
+        ax1.set_xlabel("Expected Tx Rate (Mbps)")
+        ax1.set_ylabel("Measured Tx Rate (Mbps)")
+
+        # reference
+        brs = result[list(result)[0]]
+        x0 = [i/1e6 for i in sorted(brs)]
+        line0 = ax1.plot(x0, x0, label="Ref.", color="k", alpha=0.2,
+                        linestyle="dashed")
+
+        for psize in sorted(result.keys()):
+            brs = result[psize]
+            x = [i/1e6 for i in sorted(brs)]
+            line1 = ax1.plot(x,
+                             [brs[br]["send_br"]/1e6 for br in sorted(brs)],
+                             label=f"{psize}",
+                             marker="o",
+                             linestyle="solid")
+            ax1.legend(title="Rx rate", frameon=False, prop={'size':8},
+                    bbox_to_anchor=(-.11, 0.8), loc="center right")
+            ax1.grid()
+        ax1.set_xlim(0)
+        ax1.set_ylim(0)
+
+    fig.tight_layout()
+    if opt.save_graph:
+        save_graph(opt, "br")
+    if opt.show_graph:
+        plt.show()
+
 br_profile = {
     "1g": "1m,100m,200m,400m,600m,700m,800m,900m,1000m",
     "100m": "1m,10m,20m,40m,60m,70m,80m,90m,100m",
@@ -384,6 +454,8 @@ def main():
                     help="specify to make a br graph.")
     ap.add_argument("--graph-pps", action="store_true", dest="make_pps_graph",
                     help="specify to make a pps graph.")
+    ap.add_argument("--graph-tx", action="store_true", dest="make_tx_graph",
+                    help="specify to make a Tx graph.")
     ap.add_argument("--save-dir", action="store", dest="result_dir",
                     help="specify the directory to save the result files.")
     ap.add_argument("--save-graph", "-S",
@@ -413,7 +485,7 @@ def main():
     if opt.do_test:
         measure(opt)
     # make a graph.
-    if opt.make_br_graph or opt.make_pps_graph:
+    if opt.make_br_graph or opt.make_pps_graph or opt.make_tx_graph:
         if opt.br_list_str is None:
             opt.br_list = "*"
         if opt.psize_list_str is None:
@@ -422,6 +494,8 @@ def main():
             make_br_graph(opt)
         if opt.make_pps_graph:
             make_pps_graph(opt)
+        if opt.make_tx_graph:
+            make_tx_graph(opt)
 
 if __name__ == "__main__" :
     main()
