@@ -312,7 +312,9 @@ def make_br_graph(opt):
         ax1.set_ylabel("Rx Rate (Mbps)")
 
         # reference
-        brs = list(result.values())[0]
+        brs = []
+        for i in result.values():
+            brs.extend(i.keys())
         x0 = sorted([i/1e6 for i in sorted(brs)])
         line0 = ax1.plot(x0, x0, label="Ref.", color="k", alpha=0.2,
                         linestyle="dashed")
@@ -327,7 +329,7 @@ def make_br_graph(opt):
                              linestyle="solid")
             ax1.legend(title="Rx rate", frameon=False, prop={'size':8},
                     bbox_to_anchor=(-.11, 0.8), loc="center right")
-            ax1.grid()
+        ax1.grid()
         ax1.set_xlim(0)
         ax1.set_ylim(0)
 
