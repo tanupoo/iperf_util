@@ -330,8 +330,14 @@ def make_br_graph(opt):
             ax1.legend(title="Rx rate", frameon=False, prop={'size':8},
                     bbox_to_anchor=(-.11, 0.8), loc="center right")
         ax1.grid()
-        ax1.set_xlim(0)
-        ax1.set_ylim(0)
+        if opt.xlim_max == 0:
+            ax1.set_xlim(0)
+        else:
+            ax1.set_xlim(0,opt.xlim_max)
+        if opt.ylim_max == 0:
+            ax1.set_ylim(0)
+        else:
+            ax1.set_ylim(0,opt.ylim_max)
 
         ax2 = ax1.twinx()
         ax2.set_ylabel("Rx Lost (%)")
@@ -471,6 +477,12 @@ def main():
                     help="specify to make a pps graph.")
     ap.add_argument("--graph-tx", action="store_true", dest="make_tx_graph",
                     help="specify to make a Tx graph.")
+    ap.add_argument("--graph-xlim-max", action="store", dest="xlim_max",
+                    type=int, default=0,
+                    help="specify x max value of the graph.")
+    ap.add_argument("--graph-ylim-max", action="store", dest="ylim_max",
+                    type=int, default=0,
+                    help="specify y max value of the graph.")
     ap.add_argument("--save-dir", action="store", dest="result_dir",
                     help="specify the directory to save the result files.")
     ap.add_argument("--save-graph", "-S",
