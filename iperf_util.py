@@ -174,7 +174,7 @@ def make_pps_graph(opt):
     """
     to show how many packets with a fixed size can be properly transmitted in a second.
     """
-    if len(opt.br_list) == 1 and opt.br_list != "*":
+    if len(opt.br_list) == 1:
         result = read_result(opt, "psize")
         k1 = list(result.keys())[0]
         fig = plt.figure()
@@ -421,11 +421,16 @@ def make_tx_graph(opt):
         plt.show()
 
 br_profile = {
-    "1g": "1m,100m,200m,400m,600m,700m,800m,900m,1000m",
-    "100m": "1m,10m,20m,40m,60m,70m,80m,90m,100m",
-    "50m": "1m,10m,20m,30m,35m,40m,45m,50m",
-    "20m": "1m,4m,8m,10m,12m,14m,16m,18m,20m",
-    "10m": "1m,2m,4m,6m,7m,8m,9m,10m",
+    "1g": "1m,100m,200m,400m,600m,800m,1000m",
+    "x1g": "1m,100m,200m,300m,400m,500m,600m,700m,800m,900m,1000m",
+    "100m": "1m,20m,40m,60m,80m,100m",
+    "x100m": "1m,10m,20m,30m,40m,50m,60m,70m,80m,90m,100m",
+    "50m": "1m,10m,20m,30m,40m,50m",
+    "x50m": "1m,5m,10m,15m,20m,25m,30m,35m,40m,45m,50m",
+    "20m": "1m,4m,8m,12m,16m,20m",
+    "x20m": "1m,2m,4m,6m,8m,10m,12m,14m,16m,18m,20m",
+    "10m": "1m,2m,4m,6m,8m,10m",
+    "x10m": "1m,2m,3m,4m,5m,6m,7m,8m,9m,10m",
     }
 
 def main():
@@ -436,7 +441,7 @@ def main():
     ap.add_argument("-x", action="store_true", dest="do_test",
                     help="specify to run test.")
     ap.add_argument("--profile", action="store", dest="br_profile",
-                    choices=["1g","100m","50m","10m"],
+                    choices=br_profile.keys(),
                     default="100m",
                     help="specify not to test.")
     ap.add_argument("--brate", metavar="BR_SPEC", action="store",
@@ -486,7 +491,7 @@ def main():
         measure(opt)
     # make a graph.
     if opt.make_br_graph or opt.make_pps_graph or opt.make_tx_graph:
-        if opt.br_list_str is None:
+        if opt.br_list_str is None and opt.br_profile is None:
             opt.br_list = "*"
         if opt.psize_list_str is None:
             opt.psize_list = "*"
