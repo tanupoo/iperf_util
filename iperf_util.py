@@ -437,7 +437,11 @@ br_profile = {
 def main():
     ap = ArgumentParser(
             description="a utility for iperf3",
-            formatter_class=ArgumentDefaultsHelpFormatter)
+            formatter_class=ArgumentDefaultsHelpFormatter,
+            epilog="range can be used for specifying "
+                "the bitrate and payload size. "
+                "The format is like range:<start>,<end>,<inc>.  "
+                "For example, --brate range:10m,20m,1m")
     ap.add_argument("server_name", help="server name")
     ap.add_argument("-x", action="store_true", dest="do_test",
                     help="specify to run test.")
