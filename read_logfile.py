@@ -9,6 +9,7 @@ re_cmdline = re.compile(
         "% iperf3 -u "
         "-c (?P<host>[^\s]+) "
         "-P (?P<nb_parallel>\d+) "
+        "(-t (?P<time>\d+) )?"
         "-b (?P<bw>\d+)(?P<bw_unit>(|[MKGmkg])) "
         "-l (?P<psize>\d+)"
         ".*")
@@ -131,11 +132,59 @@ iperf Done.
         "lost_percent": 0.0
     }
 }
-    """ ]
+    """ ],
+            [ """
+% iperf3 -u -c 192.168.0.102 -P 1 -t 10 -b 1000000 -l 16
+[  5] local 192.168.0.103 port 62049 connected to 192.168.0.102 port 5201
+[ ID] Interval           Transfer     Bitrate         Total Datagrams
+[  5]   0.00-1.00   sec   122 KBytes   999 Kbits/sec  7808  
+[  5]   1.00-2.00   sec   122 KBytes  1.00 Mbits/sec  7813  
+[  5]   2.00-3.00   sec   122 KBytes  1000 Kbits/sec  7812  
+[  5]   3.00-4.00   sec   122 KBytes  1000 Kbits/sec  7812  
+[  5]   4.00-5.00   sec   122 KBytes  1000 Kbits/sec  7811  
+[  5]   5.00-6.00   sec   122 KBytes  1.00 Mbits/sec  7814  
+[  5]   6.00-7.00   sec   122 KBytes  1.00 Mbits/sec  7813  
+[  5]   7.00-8.00   sec   122 KBytes  1000 Kbits/sec  7812  
+[  5]   8.00-9.00   sec   122 KBytes  1.00 Mbits/sec  7813  
+[  5]   9.00-10.00  sec   122 KBytes  1.00 Mbits/sec  7812  
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Jitter    Lost/Total Datagrams
+[  5]   0.00-10.00  sec  1.19 MBytes  1000 Kbits/sec  0.000 ms  0/78120 (0%)  sender
+[  5]   0.00-10.00  sec  1.19 MBytes  1000 Kbits/sec  0.073 ms  0/78120 (0%)  receiver
+
+iperf Done.
+    """,
+    """
+{
+    "sender": {
+        "start": 0.0,
+        "end": 10.0,
+        "bytes_sent": 1190000.0,
+        "bps": 1000000,
+        "jitter_ms": 0.0,
+        "lost": 0,
+        "packets_sent": 78120,
+        "lost_percent": 0.0,
+        "payload_size": 16,
+        "target_bw": 1000000
+    },
+    "receiver": {
+        "start": 0.0,
+        "end": 10.0,
+        "bytes_received": 1190000.0,
+        "bps": 1000000,
+        "jitter_ms": 0.073,
+        "lost": 0,
+        "packets_received": 78120,
+        "lost_percent": 0.0
+    }
+}
+    """ ],
     ]
     if len(sys.argv) > 1:
         print(json.dumps(read_file(sys.argv[1]), indent=4))
     else:
-        r = parse_log(testv[0][0].splitlines()[1:])
-        print(json.dumps(r, indent=4))
-        print(r == json.loads(testv[0][1]))
+        for t in testv:
+            r = parse_log(t[0].splitlines()[1:])
+            print(json.dumps(r, indent=4))
+            print(r == json.loads(t[1]))
