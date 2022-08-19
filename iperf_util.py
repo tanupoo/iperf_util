@@ -443,7 +443,6 @@ def main():
                     help="specify to run test.")
     ap.add_argument("--profile", action="store", dest="br_profile",
                     choices=br_profile.keys(),
-                    default="100m",
                     help="specify not to test.")
     ap.add_argument("--brate", metavar="BR_SPEC", action="store",
                     dest="br_list_str",
@@ -479,8 +478,7 @@ def main():
     if opt.result_dir is not None and not os.path.exists(opt.result_dir):
         os.mkdir(opt.result_dir)
     # set br_list and psize_list
-    opt.br_list = get_test_list(opt.br_list_str,
-        br_profile[opt.br_profile])
+    opt.br_list = get_test_list(opt.br_list_str, br_profile["100m"])
     opt.psize_list = get_test_list(opt.psize_list_str,
         "16,32,64,128,256,512,768,1024,1280,1448")
     print("bitrate:",
