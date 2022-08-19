@@ -494,6 +494,8 @@ def main():
             opt.br_list = "*"
         if opt.psize_list_str is None:
             opt.psize_list = "*"
+        print("bitrate:", ",".join([str(n) for n in opt.br_list]))
+        print("payload size:", ",".join([str(n) for n in opt.psize_list]))
         if opt.make_br_graph:
             make_br_graph(opt)
         if opt.make_pps_graph:
