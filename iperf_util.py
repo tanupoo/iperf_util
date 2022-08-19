@@ -439,10 +439,10 @@ def main():
                     choices=["1g","100m","50m","10m"],
                     default="100m",
                     help="specify not to test.")
-    ap.add_argument("--br-list", metavar="BR_SPEC", action="store",
+    ap.add_argument("--brate", metavar="BR_SPEC", action="store",
                     dest="br_list_str",
                     help="specify the list of the bitrate.")
-    ap.add_argument("--psize-list", metavar="PSIZE_SPEC", action="store",
+    ap.add_argument("--psize", metavar="PSIZE_SPEC", action="store",
                     dest="psize_list_str",
                     help="specify the list of the payload sizes.")
     ap.add_argument("--reverse", action="store_true", dest="reverse",
