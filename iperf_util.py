@@ -195,12 +195,13 @@ def make_pps_graph(opt):
         ax1.set_ylim(0)
         ax1.grid()
 
-        ax2 = ax1.twinx()
-        ax2.set_ylabel("Jitter(ms)")
-        line2 = ax2.plot(x,
-                         [brs[br]["jitter"] for br in sorted(brs)],
-                         label=f"{k1}",
-                         alpha=0.5)
+        if opt.with_y2:
+            ax2 = ax1.twinx()
+            ax2.set_ylabel("Jitter(ms)")
+            line2 = ax2.plot(x,
+                            [brs[br]["jitter"] for br in sorted(brs)],
+                            label=f"{k1}",
+                            alpha=0.5)
 
     else:
         result = read_result(opt, "br")
@@ -224,16 +225,17 @@ def make_pps_graph(opt):
         ax.set_ylim(0)
         ax.grid()
 
-        ax3 = ax.twinx()
-        ax3.set_ylabel("Jitter(ms)")
-        for psize in sorted(result.keys()):
-            brs = result[psize]
-            x = [brs[br]["send_pps"]/1e6 for br in sorted(brs)]
-            line3 = ax3.plot(x,
-                            [brs[br]["jitter"] for br in sorted(brs)],
-                            label=f"{psize}", alpha=0.5)
-        ax3.legend(title="jitter", frameon=False, prop={'size':8},
-                bbox_to_anchor=(1.11, 0.8), loc="center left")
+        if opt.with_y2:
+            ax3 = ax.twinx()
+            ax3.set_ylabel("Jitter(ms)")
+            for psize in sorted(result.keys()):
+                brs = result[psize]
+                x = [brs[br]["send_pps"]/1e6 for br in sorted(brs)]
+                line3 = ax3.plot(x,
+                                [brs[br]["jitter"] for br in sorted(brs)],
+                                label=f"{psize}", alpha=0.5)
+            ax3.legend(title="jitter", frameon=False, prop={'size':8},
+                    bbox_to_anchor=(1.11, 0.8), loc="center left")
 
     fig.tight_layout()
     if opt.save_graph:
@@ -277,27 +279,28 @@ def make_br_graph(opt):
         ax1.set_xlim(0)
         ax1.set_ylim(0)
 
-        ax2 = ax1.twinx()
-        ax2.set_ylabel("Rx Lost (%)")
-        ax2.set_ylim(0,100)
-        lines += ax2.plot(x,
-                          [brs[br]["lost"] for br in sorted(brs)],
-                          label="Lost (%)",
-                          color=plt.cm.viridis(0.9),
-                          alpha=0.5)
+        if opt.with_y2:
+            ax2 = ax1.twinx()
+            ax2.set_ylabel("Rx Lost (%)")
+            ax2.set_ylim(0,100)
+            lines += ax2.plot(x,
+                            [brs[br]["lost"] for br in sorted(brs)],
+                            label="Lost (%)",
+                            color=plt.cm.viridis(0.9),
+                            alpha=0.5)
 
-        ax3 = ax1.twinx()
-        ax3.set_visible(True)
-        ax3.set_ylabel("Avr. Jitter (ms)")
-        ax3.set_ylim(0,10)
-        ax3.spines["right"].set_position(("outward", 50))
-        ax3.yaxis.set_label_position('right')
-        ax3.yaxis.set_ticks_position('right')
-        lines += ax3.plot(x,
-                          [brs[br]["jitter"] for br in sorted(brs)],
-                          label="Jitter (ms))",
-                          color=plt.cm.viridis(0.5),
-                          alpha=0.5)
+            ax3 = ax1.twinx()
+            ax3.set_visible(True)
+            ax3.set_ylabel("Avr. Jitter (ms)")
+            ax3.set_ylim(0,10)
+            ax3.spines["right"].set_position(("outward", 50))
+            ax3.yaxis.set_label_position('right')
+            ax3.yaxis.set_ticks_position('right')
+            lines += ax3.plot(x,
+                            [brs[br]["jitter"] for br in sorted(brs)],
+                            label="Jitter (ms))",
+                            color=plt.cm.viridis(0.5),
+                            alpha=0.5)
 
         ax1.legend(handles=lines,
                    bbox_to_anchor=(0.5, 1.1), loc="upper center",
@@ -339,19 +342,20 @@ def make_br_graph(opt):
         else:
             ax1.set_ylim(0,opt.ylim_max)
 
-        ax2 = ax1.twinx()
-        ax2.set_ylabel("Rx Lost (%)")
-        for psize in sorted(result.keys()):
-            brs = result[psize]
-            x = [brs[br]["send_br"]/1e6 for br in sorted(brs)]
-            line2 = ax2.plot(x,
-                             [brs[br]["lost"] for br in sorted(brs)],
-                             label=f"{psize}",
-                             #alpha=0.5,
-                             linestyle="dashed")
-            ax2.legend(title="Lost", frameon=False, prop={'size':8},
-                    bbox_to_anchor=(1.11, 0.8), loc="center left")
-        ax2.set_ylim(0)
+        if opt.with_y2:
+            ax2 = ax1.twinx()
+            ax2.set_ylabel("Rx Lost (%)")
+            for psize in sorted(result.keys()):
+                brs = result[psize]
+                x = [brs[br]["send_br"]/1e6 for br in sorted(brs)]
+                line2 = ax2.plot(x,
+                                [brs[br]["lost"] for br in sorted(brs)],
+                                label=f"{psize}",
+                                #alpha=0.5,
+                                linestyle="dashed")
+                ax2.legend(title="Lost", frameon=False, prop={'size':8},
+                        bbox_to_anchor=(1.11, 0.8), loc="center left")
+            ax2.set_ylim(0)
 
     fig.tight_layout()
     if opt.save_graph:
@@ -477,6 +481,8 @@ def main():
                     help="specify to make a pps graph.")
     ap.add_argument("--graph-tx", action="store_true", dest="make_tx_graph",
                     help="specify to make a Tx graph.")
+    ap.add_argument("--graph-y2", action="store_true", dest="with_y2",
+                    help="specify to make a graph with the second Y axes.")
     ap.add_argument("--graph-xlim-max", action="store", dest="xlim_max",
                     type=int, default=0,
                     help="specify x max value of the graph.")
