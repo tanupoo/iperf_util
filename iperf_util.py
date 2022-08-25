@@ -193,6 +193,8 @@ def make_pps_graph(opt):
                         marker="o",
                         linestyle="solid")
         ax1.set_ylim(0)
+        print(f"X axes: {ax1.get_xlim()}")
+        print(f"Y axes: {ax1.get_ylim()}")
         ax1.grid()
 
         if opt.with_y2:
@@ -223,6 +225,8 @@ def make_pps_graph(opt):
         ax.legend(title="lost", frameon=False, prop={'size':8},
                 bbox_to_anchor=(-.11, 0.8), loc="center right")
         ax.set_ylim(0)
+        print(f"X axes: {ax1.get_xlim()}")
+        print(f"Y axes: {ax1.get_ylim()}")
         ax.grid()
 
         if opt.with_y2:
@@ -269,7 +273,6 @@ def make_br_graph(opt):
         # result
         lines = []
         x = [brs[br]["send_br"]/1e6 for br in sorted(brs)]
-        ax1.grid()
         lines += ax1.plot(x,
                           [brs[br]["recv_br"]/1e6 for br in sorted(brs)],
                           label="Bitrate (bps)",
@@ -278,6 +281,9 @@ def make_br_graph(opt):
                           linestyle="solid")
         ax1.set_xlim(0)
         ax1.set_ylim(0)
+        print(f"X axes: {ax1.get_xlim()}")
+        print(f"Y axes: {ax1.get_ylim()}")
+        ax1.grid()
 
         if opt.with_y2:
             ax2 = ax1.twinx()
@@ -332,7 +338,6 @@ def make_br_graph(opt):
                              linestyle="solid")
             ax1.legend(title="Rx rate", frameon=False, prop={'size':8},
                     bbox_to_anchor=(-.11, 0.8), loc="center right")
-        ax1.grid()
         if opt.xlim_max == 0:
             ax1.set_xlim(0)
         else:
@@ -341,6 +346,9 @@ def make_br_graph(opt):
             ax1.set_ylim(0)
         else:
             ax1.set_ylim(0,opt.ylim_max)
+        print(f"X axes: {ax1.get_xlim()}")
+        print(f"Y axes: {ax1.get_ylim()}")
+        ax1.grid()
 
         if opt.with_y2:
             ax2 = ax1.twinx()
@@ -389,7 +397,6 @@ def make_tx_graph(opt):
         # result
         lines = []
         x = x0
-        ax1.grid()
         lines += ax1.plot(x,
                           [brs[br]["send_br"]/1e6 for br in sorted(brs)],
                           label="Bitrate (bps)",
@@ -398,6 +405,9 @@ def make_tx_graph(opt):
                           linestyle="solid")
         ax1.set_xlim(0)
         ax1.set_ylim(0)
+        print(f"X axes: {ax1.get_xlim()}")
+        print(f"Y axes: {ax1.get_ylim()}")
+        ax1.grid()
 
     else:
         fig = plt.figure(figsize=(12,7))
@@ -424,9 +434,11 @@ def make_tx_graph(opt):
             ax1.legend(title="Rx rate", frameon=False, prop={'size':8},
                     bbox_to_anchor=(-.11, 0.8), loc="center right")
 
-        ax1.grid()
         ax1.set_xlim(0)
         ax1.set_ylim(0)
+        print(f"X axes: {ax1.get_xlim()}")
+        print(f"Y axes: {ax1.get_ylim()}")
+        ax1.grid()
 
     fig.tight_layout()
     if opt.save_graph:
