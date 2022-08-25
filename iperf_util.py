@@ -496,10 +496,10 @@ def main():
     ap.add_argument("--graph-y2", action="store_true", dest="with_y2",
                     help="specify to make a graph with the second Y axes.")
     ap.add_argument("--graph-xlim-max", action="store", dest="xlim_max",
-                    type=int, default=0,
+                    type=float, default=0,
                     help="specify x max value of the graph.")
     ap.add_argument("--graph-ylim-max", action="store", dest="ylim_max",
-                    type=int, default=0,
+                    type=float, default=0,
                     help="specify y max value of the graph.")
     ap.add_argument("--save-dir", action="store", dest="result_dir",
                     help="specify the directory to save the result files.")
