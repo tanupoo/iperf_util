@@ -25,6 +25,7 @@ re_result = re.compile(
         "(?P<role>sender|receiver)"
         ".*")
 
+# parsing the iperf_util output.
 def parse_log(lines, file_name="..."):
     line_no = 0
     for i,line in enumerate(lines):
@@ -182,7 +183,7 @@ iperf Done.
     """ ],
     ]
     if len(sys.argv) > 1:
-        print(json.dumps(read_file(sys.argv[1]), indent=4))
+        print(json.dumps(parse_log(open(sys.argv[1]).read().splitlines()), indent=4))
     else:
         for t in testv:
             r = parse_log(t[0].splitlines()[1:])
