@@ -24,6 +24,14 @@ re_result = re.compile(
         "\((?P<loss_rate>.+)%\)\s+"
         "(?P<role>sender|receiver)"
         ".*")
+# assuming the span of each test is 1 sencond.
+# [  5]   0.00-1.00   sec  1.22 MBytes  10.2 Mbits/sec
+re_tcp_line = re.compile(
+        "^\[\s*\d+\]\s*"
+        "(?P<start>[\d\.]+)-(?P<end>[\d\.]+)\s+sec\s+"
+        "(?P<transfer>[\d\.]+)\s+(?P<transfer_unit>(|[MKG]))Bytes\s+"
+        "(?P<bitrate>[\d\.]+)\s+(?P<bitrate_unit>(|[MKG]))bits/sec\s+"
+        )
 
 # parsing the iperf_util output.
 def parse_log(lines, file_name="..."):
@@ -81,6 +89,24 @@ def parse_log(lines, file_name="..."):
 
 def read_logfile(file_name):
     return parse_log(open(file_name).read().splitlines(), file_name)
+
+def parse_tcp_log(lines, file_name="..."):
+    result = []
+    line_no = 0
+    for i,line in enumerate(lines):
+        if (r := re_tcp_line.match(line)) is not None:
+            result.append({
+                    "start": float(r.group("start")),
+                    "end": float(r.group("end")),
+                    "bytes_sent": convert_xnum(
+                            f'{r.group("transfer")}{r.group("transfer_unit")}'),
+                    "bps": convert_xnum(
+                            f'{r.group("bitrate")}{r.group("bitrate_unit")}'),
+                    })
+    return result
+
+def read_tcp_logfile(file_name):
+    return parse_tcp_log(open(file_name).read().splitlines(), file_name)
 
 if __name__ == "__main__":
     # test
@@ -183,7 +209,11 @@ iperf Done.
     """ ],
     ]
     if len(sys.argv) > 1:
-        print(json.dumps(parse_log(open(sys.argv[1]).read().splitlines()), indent=4))
+        if sys.argv[1] == "tcp":
+            print(json.dumps(parse_tcp_log(open(sys.argv[2]).read()
+                                           .splitlines()), indent=4))
+        else:
+            print(json.dumps(parse_log(open(sys.argv[1]).read().splitlines()), indent=4))
     else:
         for t in testv:
             r = parse_log(t[0].splitlines()[1:])
