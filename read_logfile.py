@@ -32,6 +32,15 @@ re_tcp_line = re.compile(
         "(?P<transfer>[\d\.]+)\s+(?P<transfer_unit>(|[MKG]))Bytes\s+"
         "(?P<bitrate>[\d\.]+)\s+(?P<bitrate_unit>(|[MKG]))bits/sec\s+"
         )
+# assuming the span of each test is 1 sencond.
+# 64 bytes from 1.1.1.1: icmp_seq=109 ttl=63 time=2.196 ms
+re_ping_line = re.compile(
+        "^(?P<size>\d+) "
+        "bytes from [\d\.a-fA-F:]+: "
+        "icmp_seq=(?P<seq>\d+) "
+        "ttl=(?P<ttl>\d+) "
+        "time=(?P<rtt>[\d\.]+) ms"
+        )
 
 # parsing the iperf_util output.
 def parse_log(lines, file_name="..."):
@@ -107,6 +116,22 @@ def parse_tcp_log(lines, file_name="..."):
 
 def read_tcp_logfile(file_name):
     return parse_tcp_log(open(file_name).read().splitlines(), file_name)
+
+def parse_ping_log(lines, file_name="..."):
+    result = []
+    line_no = 0
+    for i,line in enumerate(lines):
+        if (r := re_ping_line.match(line)) is not None:
+            result.append({
+                    "size": int(r.group("size")),
+                    "seq": int(r.group("seq")),
+                    "ttl": int(r.group("ttl")),
+                    "rtt": float(r.group("rtt")),
+                    })
+    return result
+
+def read_ping_logfile(file_name):
+    return parse_ping_log(open(file_name).read().splitlines(), file_name)
 
 if __name__ == "__main__":
     # test
