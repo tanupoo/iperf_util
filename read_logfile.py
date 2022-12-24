@@ -121,8 +121,16 @@ def parse_ping_log(lines, file_name="..."):
     result = []
     line_no = 0
     for i,line in enumerate(lines):
+        if line.startswith("["):
+            # timestamp exists.
+            # use localtime zone.
+            ts = float(line[1:line.index("] ")])
+            line = line[line.index("] ")+2:]
+        else:
+            ts = 0
         if (r := re_ping_line.match(line)) is not None:
             result.append({
+                    "ts": ts,
                     "size": int(r.group("size")),
                     "seq": int(r.group("seq")),
                     "ttl": int(r.group("ttl")),
