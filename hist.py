@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import sys
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -34,13 +33,15 @@ ap.add_argument("-t", action="store", dest="log_type",
 ap.add_argument("-m", action="store", dest="graph_mode",
                 choices=["hist"], default="hist",
                 help="specify the graph mode.")
-ap.add_argument("--graph-yrange", action="store", dest="yrange_str",
+ap.add_argument("--graph-yrange", action="store", dest="graph_yrange_str",
                 help="specify yrange min,max number separated by a comma.")
-ap.add_argument("--graph-xrange", action="store", dest="xrange_str",
+ap.add_argument("--graph-xrange", action="store", dest="graph_xrange_str",
                 help="specify xrange min,max number separated by a comma.")
 ap.add_argument("--hist-bins", action="store", dest="nb_bins",
                 type=int, default=11,
                 help="specify a number of bins for histgram.")
+ap.add_argument("--data-xrange", action="store", dest="data_xrange_str",
+                help="specify xrange min,max number separated by a comma.")
 ap.add_argument("--save-graph", action="store", dest="save_file",
                 help="specify a filename to store the graph.")
 opt = ap.parse_args()
@@ -52,7 +53,13 @@ if opt.log_type == "tcp":
     xscale = 1e6
 elif opt.log_type == "ping":
     result = read_ping_logfile(opt.log_file)
-    sr = pd.Series([n["rtt"] for n in result])
+    print(result)
+    if opt.data_xrange_str:
+        x0, x1, step = get_range(opt.data_xrange_str)
+        sr = pd.Series([n["rtt"] for n in result if x0 <= n["rtt"] <= x1])
+    else:
+        sr = pd.Series([n["rtt"] for n in result])
+    print(sr)
     xlabel = "RTT (ms)"
     xscale = 1
 elif opt.log_type == "udp":
@@ -65,9 +72,9 @@ else:
 desc = sr.describe()
 print(f"## Desciption:\n{desc}")
 
-if opt.xrange_str is not None:
+if opt.graph_xrange_str is not None:
     # NOTE: in the histgram mode, x_ticks must not be used, use x instead.
-    x_min, x_max, x_ticks = get_range(opt.xrange_str)
+    x_min, x_max, x_ticks = get_range(opt.graph_xrange_str)
     bins = np.linspace(x_min, x_max, opt.nb_bins)
 else:
     x_min, x_max = sr.min(), sr.max()
@@ -87,17 +94,19 @@ fig, ax = plt.subplots()
 x = [round(n/xscale,2) for n in df[xlabel]]
 y = [n for n in df["freq"]]
 ax.bar(x, y, width=bar_width)
-ax.set_xticks(x)
+ax.set_xticks(x,
+              [str(i) for i in x],
+              rotation=90)
 
-if opt.xrange_str is not None:
+if opt.graph_xrange_str is not None:
     # x_min, x_max are assigned above.
     ax.set_xlim(x_min/xscale, x_max/xscale)
 x_min, x_max = ax.get_xlim()
 print(f"x_min = {x_min}")
 print(f"x_max = {x_max}")
 
-if opt.yrange_str is not None:
-    y_min, y_max, y_ticks = get_range(opt.yrange_str)
+if opt.graph_yrange_str is not None:
+    y_min, y_max, y_ticks = get_range(opt.graph_yrange_str)
     ax.set_ylim(y_min, y_max)
     ax.set_yticks(y_ticks)
 y_min, y_max = ax.get_ylim()
