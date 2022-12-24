@@ -117,8 +117,9 @@ ax.set_xlabel(f"{xlabel}")
 ax.set_ylabel("Frequency")
 ax.grid()
 
+fig.tight_layout()
+
 if opt.save_file:
     plt.savefig(opt.save_file)
-fig.tight_layout()
 plt.show()
 
